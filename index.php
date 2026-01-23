@@ -868,6 +868,7 @@ include 'header.php';
 <!-- /End video testimonials section -->
 
 
+<!-- SECTION DIRECTOR -->
 <section class="director-section bg-light py-5">
 	<div class="container">
 		<div class="row justify-content-center">
@@ -894,7 +895,7 @@ include 'header.php';
 		</div>
 	</div>
 </section>
-<!-- /End video testimonials section -->
+<!-- END SECTION DIRECTOR -->
 
 
 <!-- Excursions section -->
