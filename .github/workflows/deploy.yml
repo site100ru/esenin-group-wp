@@ -15,9 +15,9 @@ jobs:
           username: ${{ secrets.ESENIN_USER }}
           key: ${{ secrets.ESENIN_KEY }}
           script: |
-            cd ~/esenin-group/public_html/wp-content/themes/esenin-group
+            #cd ~/esenin-group/public_html/wp-content/themes/esenin-group
             #git clone git@github.com:site100ru/esenin-group-wp.git .
-            git clone https://github.com/site100ru/esenin-group-wp.git .
+            #git clone https://github.com/site100ru/esenin-group-wp.git .
             
-            #cd /var/www/u1538455/data/www/gazmaster62.ru/wp-content/themes/gazmaster62ru
-            #git pull
+            cd ~/esenin-group/public_html/wp-content/themes/esenin-group
+            git pull
