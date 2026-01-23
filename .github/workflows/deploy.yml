@@ -1,0 +1,22 @@
+name: Deploy esenin-group
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect to server
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.ESENIN_HOST }}
+          username: ${{ secrets.ESENIN_USER }}
+          key: ${{ secrets.REGRU_ESENIN }}
+          script: |
+            cd ~/esenin-group/public_html/wp-content/themes/esenin-group
+            git clone git@github.com:site100ru/esenin-group-wp.git .
+            
+            #cd /var/www/u1538455/data/www/gazmaster62.ru/wp-content/themes/gazmaster62ru
+            #git pull
