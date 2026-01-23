@@ -1,11 +1,11 @@
 <?php
 	
-	/*
-	 * Template Name: Главная
-	 * Template Post Type: page
-	 */
-	
-	include 'header.php';
+/**
+ * Template Name: Главная
+ * Template Post Type: page
+ */
+
+include 'header.php';
 	 
 ?>
 
