@@ -167,6 +167,10 @@ if ( post_password_required() ) {
 			</li>
 			<?php endif; ?>
 		</ul>
+        
+        <div class="d-block d-md-none text-center mb-4">
+            <img src="<?php echo get_template_directory_uri(); ?>/img/ico/section-menu-coursor.svg" alt="Разделительная точка">
+        </div>
 
 		<div class="tab-content" id="productTabsContent">
 			<!-- Описание -->

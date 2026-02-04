@@ -130,7 +130,7 @@ do_action('woocommerce_before_main_content');
                         ?>
                     </ul>
                 </div>
-                <div class="text-center mb-4">
+                <div class="d-block d-md-none text-center mb-4">
                     <img src="<?php echo get_template_directory_uri(); ?>/img/ico/section-menu-coursor.svg" alt="Разделительная точка">
                 </div>
             </div>
