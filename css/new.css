@@ -1520,3 +1520,7 @@
 .woocommerce .product-card__image-link img {
     height: 100%;
 }
+
+.table-responsive {
+    height: 100%;
+}
