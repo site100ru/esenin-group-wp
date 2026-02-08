@@ -1525,3 +1525,92 @@
 .table-responsive {
     height: 100%;
 }
+
+/* Пагинация WooCommerce с Bootstrap */
+.woocommerce-pagination {
+    margin-top: 3rem;
+}
+
+.woocommerce-pagination .pagination {
+    gap: 0;
+}
+
+.woocommerce-pagination .page-item {
+    margin: 0;
+}
+
+.woocommerce-pagination .page-link {
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dee2e6;
+    color: var(--corporate-color-1);
+    background-color: #fff;
+    font-size: 14px;
+    font-weight: 400;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    margin: 0;
+    border-radius: 0;
+}
+
+/* Убираем border-radius у первого и последнего элемента если не нужен */
+.woocommerce-pagination .page-item:first-child .page-link {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.woocommerce-pagination .page-item:last-child .page-link {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* Убираем двойные границы между элементами */
+.woocommerce-pagination .page-item+.page-item .page-link {
+    border-left: none;
+}
+
+/* Hover эффект */
+.woocommerce-pagination .page-link:hover {
+    background-color: #e9ecef !important;
+    color: var(--corporate-color-1)  !important;
+    border-color: #e9ecef !important;
+    z-index: 2;
+}
+
+/* Активная страница */
+.woocommerce-pagination .page-item.active .page-link {
+    background-color: var(--corporate-color-1);
+    border-color: var(--corporate-color-1);
+    color: #fff;
+    font-weight: 500;
+    z-index: 3;
+}
+
+/* Disabled состояние (точки) */
+.woocommerce-pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* Стрелки */
+.woocommerce-pagination .page-link[aria-label="Previous"],
+.woocommerce-pagination .page-link[aria-label="Next"] {
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+}
+
+/* Адаптивность */
+@media (max-width: 576px) {
+    .woocommerce-pagination .page-link {
+        min-width: 36px;
+        height: 36px;
+        font-size: 13px;
+    }
+}

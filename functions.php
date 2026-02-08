@@ -1053,45 +1053,17 @@ function mytheme_product_loop_end($html)
 
 
 /**
- * Кастомная пагинация для WooCommerce
+ * Кастомизация стандартной пагинации WooCommerce
+ * Основная логика в шаблоне woocommerce/loop/pagination.php
  */
-remove_action('woocommerce_after_shop_loop', 'woocommerce_pagination', 10);
-add_action('woocommerce_after_shop_loop', 'mytheme_woocommerce_pagination', 10);
-
-function mytheme_woocommerce_pagination()
+add_filter('woocommerce_pagination_args', 'mytheme_woocommerce_pagination_args');
+function mytheme_woocommerce_pagination_args($args)
 {
-    if (! wc_get_loop_prop('is_paginated') || ! woocommerce_products_will_display()) {
-        return;
-    }
-
-    $args = array(
-        'total'   => wc_get_loop_prop('total_pages'),
-        'current' => wc_get_loop_prop('current_page'),
-        'base'    => esc_url_raw(add_query_arg('product-page', '%#%', false)),
-        'format'  => '?product-page=%#%',
-        'show_all' => false,
-        'end_size' => 1,
-        'mid_size' => 2,
-        'prev_next' => true,
-        'prev_text' => '←',
-        'next_text' => '→',
-        'type' => 'array',
-    );
-
-    $pages = paginate_links($args);
-
-    if (is_array($pages)) {
-        echo '<nav class="mt-5"><ul class="pagination justify-content-center page-numbers flex-wrap">';
-        foreach ($pages as $page) {
-            $page = str_replace('page-numbers', 'page-link', $page);
-            $page = str_replace('<span', '<a', $page);
-            $page = str_replace('</span>', '</a>', $page);
-
-            $active_class = strpos($page, 'current') !== false ? ' active' : '';
-            echo '<li class="page-item' . $active_class . '">' . $page . '</li>';
-        }
-        echo '</ul></nav>';
-    }
+    $args['prev_text'] = '<span aria-hidden="true">←</span>';
+    $args['next_text'] = '<span aria-hidden="true">→</span>';
+    $args['end_size'] = 1;
+    $args['mid_size'] = 2;
+    return $args;
 }
 
 
@@ -1283,24 +1255,32 @@ function enqueue_product_filters_scripts() {
     }
 }
 
-// AJAX обработчик для фильтрации товаров
+// AJAX обработчик для фильтрации товаров (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 add_action( 'wp_ajax_filter_products', 'ajax_filter_products' );
 add_action( 'wp_ajax_nopriv_filter_products', 'ajax_filter_products' );
 
 function ajax_filter_products() {
     parse_str($_GET['params'], $params);
     
-    // Устанавливаем сортировку через $_GET для совместимости с WooCommerce
+    $current_page = 1;
+    if ( isset( $params['product-page'] ) ) {
+        $current_page = intval( $params['product-page'] );
+    } elseif ( isset( $params['paged'] ) ) {
+        $current_page = intval( $params['paged'] );
+    }
+    
     if ( isset( $params['orderby'] ) ) {
         $_GET['orderby'] = $params['orderby'];
     }
+
+    $_GET['paged'] = $current_page;
 
     // Базовые аргументы запроса
     $args = array(
         'post_type'      => 'product',
         'posts_per_page' => get_option( 'posts_per_page' ),
         'post_status'    => 'publish',
-        'paged'          => isset( $params['paged'] ) ? intval( $params['paged'] ) : 1,
+        'paged'          => $current_page,
     );
 
     // Применяем стандартную сортировку WooCommerce
@@ -1312,8 +1292,7 @@ function ajax_filter_products() {
         $args['meta_key'] = $ordering_args['meta_key'];
     }
 
-    // Категория
-    if ( isset( $params['category'] ) ) {
+    if ( isset( $params['category'] ) && !empty( $params['category'] ) ) {
         $args['tax_query'][] = array(
             'taxonomy' => 'product_cat',
             'field'    => 'term_id',
@@ -1321,7 +1300,6 @@ function ajax_filter_products() {
         );
     }
 
-    // Meta query для особых условий (если будут добавлены позже)
     $meta_query = array();
 
     if ( ! empty( $meta_query ) ) {
@@ -1330,21 +1308,19 @@ function ajax_filter_products() {
     }
 
     // Tax query для атрибутов
-    $attribute_tax_query = array(); // Отдельный массив для атрибутов
+    $attribute_tax_query = array();
     
     foreach ( $params as $key => $value ) {
-        // Параметры приходят как filter_pa_brand (без []) но значение - массив
         if ( strpos( $key, 'filter_pa_' ) === 0 ) {
             $taxonomy = str_replace( 'filter_', '', $key );
             
-            // Обработка значений - теперь всегда массив благодаря []
+            // Обработка значений - всегда массив
             if ( is_array( $value ) ) {
                 $terms = array_map( 'sanitize_title', $value );
             } else {
                 $terms = array( sanitize_title( $value ) );
             }
             
-            // Фильтруем пустые значения
             $terms = array_filter( $terms );
             
             if ( ! empty( $terms ) ) {
@@ -1361,31 +1337,39 @@ function ajax_filter_products() {
     // Собираем итоговый tax_query
     $final_tax_query = array();
     
-    // Если есть категория - добавляем её первой
     if ( isset( $args['tax_query'] ) && ! empty( $args['tax_query'] ) ) {
         $final_tax_query = $args['tax_query'];
     }
     
-    // Если есть атрибуты - добавляем их как вложенную группу с OR
     if ( ! empty( $attribute_tax_query ) ) {
         if ( count( $attribute_tax_query ) > 1 ) {
-            // Несколько атрибутов - делаем вложенную группу с OR
             $attribute_tax_query['relation'] = 'OR';
             $final_tax_query[] = $attribute_tax_query;
         } else {
-            // Один атрибут - добавляем напрямую
             $final_tax_query[] = $attribute_tax_query[0];
         }
     }
     
     if ( ! empty( $final_tax_query ) ) {
-        // Между категорией и атрибутами - AND
         $final_tax_query['relation'] = 'AND';
         $args['tax_query'] = $final_tax_query;
     }
 
-    // Выполняем запрос
     $query = new WP_Query( $args );
+    
+    error_log('Query results: found=' . $query->found_posts . ', max_pages=' . $query->max_num_pages);
+
+    global $wp_query, $paged;
+    $old_query = $wp_query; 
+    $wp_query = $query;     
+    $paged = $current_page; 
+    
+    wc_set_loop_prop( 'current_page', $current_page );
+    wc_set_loop_prop( 'is_paginated', true );
+    wc_set_loop_prop( 'page_template', get_page_template_slug() );
+    wc_set_loop_prop( 'per_page', $args['posts_per_page'] );
+    wc_set_loop_prop( 'total', $query->found_posts );
+    wc_set_loop_prop( 'total_pages', $query->max_num_pages );
 
     ob_start();
 
@@ -1399,41 +1383,22 @@ function ajax_filter_products() {
 
         woocommerce_product_loop_end();
 
-        // Пагинация
+        error_log('Before pagination: max_pages=' . $wp_query->max_num_pages . ', current=' . $paged);
+        
         if ( $query->max_num_pages > 1 ) {
-            echo '<nav class="mt-5">';
-            echo '<ul class="pagination justify-content-center page-numbers flex-wrap">';
+            error_log('Forcing pagination output');
             
-            $current_page = max( 1, $args['paged'] );
-            
-            // Предыдущая страница
-            if ( $current_page > 1 ) {
-                echo '<li class="page-item">';
-                echo '<a class="page-link" href="#" data-page="' . ($current_page - 1) . '" aria-label="Previous">';
-                echo '<span aria-hidden="true">←</span>';
-                echo '</a></li>';
-            }
-            
-            // Страницы
-            for ( $i = 1; $i <= $query->max_num_pages; $i++ ) {
-                if ( $i == $current_page ) {
-                    echo '<li class="page-item active"><a class="page-link" href="#">' . $i . '</a></li>';
-                } elseif ( $i == 1 || $i == $query->max_num_pages || abs( $i - $current_page ) <= 2 ) {
-                    echo '<li class="page-item"><a class="page-link" href="#" data-page="' . $i . '">' . $i . '</a></li>';
-                } elseif ( abs( $i - $current_page ) == 3 ) {
-                    echo '<li class="page-item"><a class="page-link">...</a></li>';
-                }
-            }
-            
-            // Следующая страница
-            if ( $current_page < $query->max_num_pages ) {
-                echo '<li class="page-item">';
-                echo '<a class="page-link" href="#" data-page="' . ($current_page + 1) . '" aria-label="Next">';
-                echo '<span aria-hidden="true">→</span>';
-                echo '</a></li>';
-            }
-            
-            echo '</ul></nav>';
+            wc_get_template(
+                'loop/pagination.php',
+                array(
+                    'total'   => $query->max_num_pages,
+                    'current' => max( 1, $current_page ),
+                    'base'    => esc_url_raw( add_query_arg( 'paged', '%#%', false ) ),
+                    'format'  => '?paged=%#%',
+                )
+            );
+        } else {
+            error_log('Only 1 page, no pagination needed');
         }
 
     } else {
@@ -1442,6 +1407,8 @@ function ajax_filter_products() {
         echo '</div>';
     }
 
+    $wp_query = $old_query;
+    
     wp_reset_postdata();
 
     $html = ob_get_clean();
