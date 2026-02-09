@@ -1419,7 +1419,7 @@
     transition: 0.5s;
     position: fixed;
     top: -120px;
-    z-index: 999;
+    z-index: 9999999999;
 }
 
 
