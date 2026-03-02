@@ -91,129 +91,48 @@ if ( post_password_required() ) {
 					<!-- Цены -->
 					<?php wc_get_template( 'single-product/price.php' ); ?>
 
-                    <!-- Калькулятор -->
-                    <?php
-                    // Получаем данные единиц измерения
-                    $amount_units_json = get_post_meta(get_the_ID(), '_gl_amount_units', true);
-                    $amount_units = $amount_units_json ? json_decode($amount_units_json, true) : [];
+					<!-- Калькулятор -->
+					<div class="product-calculator">
+						<div class="product-card__title calculator__title mb-3">Рассчитать количество и стоимость материалов:</div>
 
-                    $quantity_unit_json = get_post_meta(get_the_ID(), '_gl_quantity_unit', true);
-                    $quantity_unit = $quantity_unit_json ? json_decode($quantity_unit_json, true) : null;
+						<div class="calculator-row">
+							<div class="calculator-field">
+								<label for="unit">Ед. Изм.</label>
+								<select id="unit">
+									<option value="m2">м²</option>
+									<option value="m">м</option>
+									<option value="sht">шт</option>
+								</select>
+							</div>
+							<div class="calculator-field">
+								<label for="area">Объем/площадь:</label>
+								<input type="number" id="area" value="99" min="1">
+							</div>
+							<div class="calculator-field">
+								<label for="quantity-field">Количество:</label>
+								<input type="number" id="quantity-field" value="999" min="1" disabled>
+							</div>
+						</div>
 
-                    // Получаем цену товара
-                    $product_price = $product->get_price();
-                    $product_regular_price = $product->get_regular_price();
-                    $product_sale_price = $product->get_sale_price();
-                    $has_price = !empty($product_price) && $product_price > 0;
+						<div class="calculator-result">
+							<div class="calculator-result-item">
+								<div class="calculator-result-label">Количество:</div>
+								<div class="quantity-control">
+									<button class="quantity-btn" type="button">−</button>
+									<input type="number" class="quantity-input" value="999" min="1">
+									<button class="quantity-btn" type="button">+</button>
+								</div>
+							</div>
+							<div class="calculator-result-item">
+								<div class="calculator-result-label">Стоимость:</div>
+								<div class="calculator-result-value">16 876</div>
+							</div>
+						</div>
 
-                    // Определяем базовую единицу измерения
-                    $base_unit = 'шт';
-                    if ($quantity_unit && isset($quantity_unit['name'])) {
-                        $base_unit = $quantity_unit['name'];
-                    }
-
-                    // Собираем список единиц измерения для селекта
-                    $units_list = [];
-
-                    // Добавляем базовую единицу
-                    $units_list[] = [
-                        'name' => $base_unit,
-                        'coefficient' => 1,
-                        'type' => 'base'
-                    ];
-
-                    // Добавляем дополнительные единицы из amount_units
-                    if (!empty($amount_units) && is_array($amount_units)) {
-                        foreach ($amount_units as $unit) {
-                            if (isset($unit['name']) && isset($unit['coefficient'])) {
-                                $units_list[] = [
-                                    'name' => $unit['name'],
-                                    'coefficient' => floatval($unit['coefficient']),
-                                    'type' => 'additional'
-                                ];
-                            }
-                        }
-                    }
-
-                    // Если вообще нет единиц, показываем хотя бы м², м, шт
-                    if (empty($units_list)) {
-                        $units_list = [
-                            ['name' => 'м²', 'coefficient' => 1, 'type' => 'default'],
-                            ['name' => 'м', 'coefficient' => 1, 'type' => 'default'],
-                            ['name' => 'шт', 'coefficient' => 1, 'type' => 'default']
-                        ];
-                    }
-                    ?>
-
-                    <div class="product-calculator" 
-                        data-product-id="<?php echo get_the_ID(); ?>" 
-                        data-product-title="<?php echo esc_attr(get_the_title()); ?>"
-                        data-price="<?php echo esc_attr($product_price); ?>"
-                        data-regular-price="<?php echo esc_attr($product_regular_price); ?>"
-                        data-sale-price="<?php echo esc_attr($product_sale_price); ?>"
-                        data-on-sale="<?php echo $product->is_on_sale() ? '1' : '0'; ?>"
-                        data-has-price="<?php echo $has_price ? '1' : '0'; ?>"
-                        data-base-unit="<?php echo esc_attr($base_unit); ?>">
-                        
-                        <div class="product-card__title calculator__title mb-3">
-                            Рассчитать количество и стоимость материалов:
-                        </div>
-
-                        <div class="calculator-row">
-                            <div class="calculator-field">
-                                <label for="calc-unit">Ед. Изм.</label>
-                                <select id="calc-unit" class="calc-unit-select">
-                                    <?php foreach ($units_list as $unit): ?>
-                                        <option 
-                                            value="<?php echo esc_attr($unit['coefficient']); ?>" 
-                                            data-name="<?php echo esc_attr($unit['name']); ?>"
-                                            data-type="<?php echo esc_attr($unit['type']); ?>"
-                                        >
-                                            <?php 
-                                            echo esc_html($unit['name']);
-                                            if ($unit['coefficient'] != 1) {
-                                                echo ' (×' . $unit['coefficient'] . ')';
-                                            }
-                                            ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            
-                            <div class="calculator-field">
-                                <label for="calc-area">Объем/площадь:</label>
-                                <input type="number" id="calc-area" class="calc-area-input" value="1" min="0" step="0.01">
-                            </div>
-                            
-                            <div class="calculator-field">
-                                <label for="calc-quantity-field">Количество:</label>
-                                <input type="number" id="calc-quantity-field" class="calc-quantity-field" value="1" min="1" step="1" readonly>
-                            </div>
-                        </div>
-
-                        <div class="calculator-result">
-                            <div class="calculator-result-item">
-                                <div class="calculator-result-label">Количество:</div>
-                                <div class="quantity-control">
-                                    <button class="quantity-btn quantity-minus" type="button">−</button>
-                                    <input type="number" class="quantity-input" value="1" min="1" step="1">
-                                    <button class="quantity-btn quantity-plus" type="button">+</button>
-                                </div>
-                            </div>
-                            <div class="calculator-result-item">
-                                <div class="calculator-result-label">Стоимость:</div>
-                                <div class="calculator-result-value calc-total-price">
-                                    <?php echo $has_price ? number_format($product_price, 0, ',', ' ') . ' ₽' : '0 ₽'; ?>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="calculator-actions">
-                            <button class="btn btn-corporate-color-1 product-card__btn calc-add-to-list" type="button" data-bs-toggle="modal" data-bs-target="#orderModal">
-                                <?php echo $has_price ? 'Заказать' : 'Запросить цену'; ?>
-                            </button>
-                        </div>
-                    </div>
+						<div class="calculator-actions">
+							<button class="btn btn-corporate-color-1 product-card__btn" type="button" data-bs-toggle="modal" data-bs-target="#orderModal">Заказать</button>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -382,7 +301,7 @@ if ( post_password_required() ) {
 <!-- ========== МОДАЛЬНОЕ ОКНО ЗАКАЗА ========== -->
 <div class="modal fade" id="orderModal" tabindex="-1" aria-labelledby="orderModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
-		<form method="post" action="<?php echo get_template_directory_uri(); ?>/mails/order-product-mail.php" class="modal-content" id="orderForm">
+		<form method="post" action="<?php echo get_template_directory_uri(); ?>/mails/order-product-mail.php" class="modal-content">
 			<div class="modal-header">
 				<h5 class="modal-title" id="orderModalLabel">Заказать товар</h5>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -455,9 +374,6 @@ if ( post_password_required() ) {
 				<input type="hidden" name="product_title" id="hiddenProductTitle" value="<?php the_title(); ?>">
 				<input type="hidden" name="product_quantity" id="hiddenProductQuantity" value="1">
 				<input type="hidden" name="product_price" id="hiddenProductPrice" value="<?php echo $product->get_price(); ?>">
-				
-				<!-- Скрытое поле для всех товаров (опционально, если планируете множественный заказ) -->
-				<input type="hidden" name="order_products" id="orderProductsData" value="[]">
 			</div>
 			<div class="modal-footer">
 				<div>
