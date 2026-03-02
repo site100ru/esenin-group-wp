@@ -19,7 +19,7 @@ include 'header.php';
         <div class="row h-100 align-items-center">
             <div class="col">
                 <h1 class="home-section-title">
-                    Сэкономьте до 10% на строительных материалах с сохранением качества
+                    Сэкономьте до 30% на строительных материалах с сохранением качества
                 </h1>
 
                 <div class="col-md-6">

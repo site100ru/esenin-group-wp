@@ -529,7 +529,7 @@ include 'header.php';
 						<div class="row justify-content-center">
 							<div class="col-8">
 								<h3 class="quiz-section-h3">Нужна конcультация?<span style="font-family: Gilroy-Light; font-size: 17px; display: block;">Отвечу на все вопросы</span></h3>
-								<img src="<?php echo get_template_directory_uri(); ?>/img/quiz/director-img.png" class="img-fluid mb-2">
+								<img src="<?php echo get_template_directory_uri(); ?>/img/quiz/director-img-3.png" class="img-fluid mb-2">
 								<h3 class="quiz-section-h3">Ерёмин Александр<span style="font-family: Gilroy-Light; font-size: 17px; display: block;">Директор компании</span></h3>
 								<a href="tel:84912409111" style="color: #343a40; text-decoration: none;"><h3 class="quiz-section-h3">8 (4912) 409-111</h3></a>
 								<ul class="nav mb-2 mb-lg-0">
@@ -881,7 +881,7 @@ include 'header.php';
 				
 				<div class="row">
 					<div class="col-12 d-md-none text-center">
-						<img src="<?php echo get_template_directory_uri(); ?>/img/quiz/director-img.png" class="img-fluid mb-5">
+						<img src="<?php echo get_template_directory_uri(); ?>/img/quiz/director-img-3.png" class="img-fluid mb-5">
 					</div>
 					<div class="col-12 offset-md-5 col-md-6 mb-4">
 						<h3 class="quiz-section-h3 mb-3">Здравствуйте! Меня зовут Еремин Александр.</h3>

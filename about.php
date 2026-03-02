@@ -69,7 +69,7 @@
 				</div>
 				<div class="row">
 					<div class="col-md-3 mb-4">
-						<img src="<?php echo get_template_directory_uri(); ?>/img/team/persona-1.jpg" class="w-100 mb-3">
+						<img src="<?php echo get_template_directory_uri(); ?>/img/team/persona-6.jpg" class="w-100 mb-3">
 						<h3 class="product-card-title">Еремин Александр</h3>
 						<p>Директор компании</p>
 					</div>
@@ -78,11 +78,11 @@
 						<h3 class="product-card-title">Лукин Илья</h3>
 						<p>Директор по строительству</p>
 					</div>
-					<!--div class="col-md-3 mb-4">
-						<img src="<?php echo get_template_directory_uri(); ?>/img/team/persona-3.jpg" class="w-100 mb-3">
-						<h3 class="product-card-title">Рахманкулов Ринат</h3>
-						<p>Старший менеджер</p>
-					</div-->
+					<div class="col-md-3 mb-4">
+						<img src="<?php echo get_template_directory_uri(); ?>/img/team/persona-5.jpg" class="w-100 mb-3">
+						<h3 class="product-card-title">Азамат</h3>
+						<p>Руководитель отдела продаж</p>
+					</div>
 					<div class="col-md-3 mb-4">
 						<img src="<?php echo get_template_directory_uri(); ?>/img/team/persona-4.jpg" class="w-100 mb-3">
 						<h3 class="product-card-title">Маслова Юлия</h3>
