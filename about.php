@@ -113,18 +113,18 @@
 					<div class="col-md-6 mb-4">
 						<img src="<?php echo get_template_directory_uri(); ?>/img/office/office-2.jpg" class="w-100 mb-3">
 					</div>
-					<div class="col-md-6 mb-4">
+					<div class="col-md-4 mb-4">
 						<img src="<?php echo get_template_directory_uri(); ?>/img/office/office-4.jpg" class="w-100 mb-3">
 					</div>
-					<div class="col-md-6 mb-4">
+					<div class="col-md-4 mb-4">
 						<img src="<?php echo get_template_directory_uri(); ?>/img/office/office-6.jpg" class="w-100 mb-3">
 					</div>
-					<div class="col-md-6 mb-4">
+					<div class="col-md-4 mb-4">
 						<img src="<?php echo get_template_directory_uri(); ?>/img/office/office-3.jpg" class="w-100 mb-3">
 					</div>
-					<div class="col-md-6 mb-4">
+					<!-- <div class="col-md-6 mb-4">
 						<img src="<?php echo get_template_directory_uri(); ?>/img/office/office-5.jpg" class="w-100 mb-3">
-					</div>
+					</div> -->
 				</div>
 			</div>
 		</div>
