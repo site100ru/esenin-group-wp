@@ -969,46 +969,45 @@ function custom_robots_txt($output)
 
 
 /**
- * Получить PDF документы товара (сертификаты)
+ * Проверить наличие документов у товара
  */
-function mytheme_get_product_documents($product_id = null)
-{
-    if (!$product_id) {
-        global $product;
-        $product_id = $product->get_id();
+function mytheme_has_product_documents() {
+    global $product;
+    
+    if (!$product) {
+        return false;
     }
-
-    $documents = get_post_meta($product_id, '_gl_documents', true);
-
-    if (empty($documents) || !is_array($documents)) {
-        return array();
-    }
-
-    $result = array();
-    foreach ($documents as $doc_id) {
-        $url = wp_get_attachment_url($doc_id);
-        $title = get_the_title($doc_id);
-
-        if ($url) {
-            $result[] = array(
-                'id' => $doc_id,
-                'url' => $url,
-                'title' => $title
-            );
-        }
-    }
-
-    return $result;
+    
+    $doc_links = get_post_meta($product->get_id(), '_gl_documents_links', true);
+    
+    return !empty($doc_links) && is_array($doc_links);
 }
 
-
 /**
- * Проверить, есть ли у товара сертификаты
+ * Получить список документов товара
  */
-function mytheme_has_product_documents($product_id = null)
-{
-    $documents = mytheme_get_product_documents($product_id);
-    return !empty($documents);
+function mytheme_get_product_documents() {
+    global $product;
+    
+    if (!$product) {
+        return [];
+    }
+    
+    $doc_links = get_post_meta($product->get_id(), '_gl_documents_links', true);
+    
+    if (empty($doc_links) || !is_array($doc_links)) {
+        return [];
+    }
+    
+    $result = [];
+    foreach ($doc_links as $doc) {
+        $result[] = [
+            'url' => $doc['url'],
+            'title' => $doc['type'] ?? 'Документ'
+        ];
+    }
+    
+    return $result;
 }
 
 
