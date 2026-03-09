@@ -20,4 +20,7 @@ jobs:
             #git clone https://github.com/site100ru/esenin-group-wp.git .
             
             cd ~/esenin-group/public_html/wp-content/themes/esenin-group
-            git pull
+            # git pull
+
+            git fetch origin
+            git reset --hard origin/main
