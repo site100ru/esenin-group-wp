@@ -1,5 +1,5 @@
 <?php
- 
+
 /*** MENU ***/
 /* Bootstrap 5 wp_nav_menu walker */
 class bootstrap_5_wp_nav_menu_walker extends Walker_Nav_menu
@@ -79,14 +79,14 @@ class bootstrap_5_wp_nav_menu_walker extends Walker_Nav_menu
         // Показываем точки только в горизонтальных меню (не в footer колонках)
         // Определяем footer меню по наличию класса "flex-column" в items_wrap
         $is_footer_menu = (isset($args->items_wrap) && strpos($args->items_wrap, 'flex-column') !== false);
-        
+
         if (!$is_footer_menu) {
             $item_title = $item->title;
             $dropdown = in_array('dropdown', $classes);
-            
+
             // Проверяем, является ли элемент последним в меню
             $is_last_item = ($item_title == 'Контакты');
-            
+
             // Добавляем точки только если это НЕ последний элемент
             if (!$is_last_item && $dropdown == false && $depth == 0) {
                 $output .= '
@@ -971,34 +971,36 @@ function custom_robots_txt($output)
 /**
  * Проверить наличие документов у товара
  */
-function mytheme_has_product_documents() {
+function mytheme_has_product_documents()
+{
     global $product;
-    
+
     if (!$product) {
         return false;
     }
-    
+
     $doc_links = get_post_meta($product->get_id(), '_gl_documents_links', true);
-    
+
     return !empty($doc_links) && is_array($doc_links);
 }
 
 /**
  * Получить список документов товара
  */
-function mytheme_get_product_documents() {
+function mytheme_get_product_documents()
+{
     global $product;
-    
+
     if (!$product) {
         return [];
     }
-    
+
     $doc_links = get_post_meta($product->get_id(), '_gl_documents_links', true);
-    
+
     if (empty($doc_links) || !is_array($doc_links)) {
         return [];
     }
-    
+
     $result = [];
     foreach ($doc_links as $doc) {
         $result[] = [
@@ -1006,7 +1008,7 @@ function mytheme_get_product_documents() {
             'title' => $doc['type'] ?? 'Документ'
         ];
     }
-    
+
     return $result;
 }
 
@@ -1231,25 +1233,26 @@ require_once get_template_directory() . '/inc/transliteration.php';
 
 
 // Подключение скриптов и стилей
-add_action( 'wp_enqueue_scripts', 'enqueue_product_filters_scripts' );
-function enqueue_product_filters_scripts() {
-    if ( is_shop() || is_product_category() || is_product_tag() ) {
+add_action('wp_enqueue_scripts', 'enqueue_product_filters_scripts');
+function enqueue_product_filters_scripts()
+{
+    if (is_shop() || is_product_category() || is_product_tag()) {
         // Подключаем jQuery если не подключен
-        wp_enqueue_script( 'jquery' );
-        
+        wp_enqueue_script('jquery');
+
         // Подключаем наш JS файл
         wp_enqueue_script(
             'product-filters',
             get_template_directory_uri() . '/js/product-filters.js',
-            array( 'jquery' ),
+            array('jquery'),
             '1.0.0',
             true
         );
 
         // Передаем AJAX URL в JavaScript
-        wp_localize_script( 'product-filters', 'wc_ajax_params', array(
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
-            'nonce'    => wp_create_nonce( 'product_filter_nonce' )
+        wp_localize_script('product-filters', 'wc_ajax_params', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce'    => wp_create_nonce('product_filter_nonce')
         ));
     }
 }
@@ -1257,34 +1260,36 @@ function enqueue_product_filters_scripts() {
 /**
  * Подключение скрипта калькулятора товаров
  */
-function enqueue_product_calculator_scripts() {
-	if ( is_product() ) {
-		wp_enqueue_script(
-			'gl-calculator',
-			get_template_directory_uri() . '/js/calculator.js',
-			array('jquery'), 
-			'1.0.0',
-			true 
-		);
-	}
+function enqueue_product_calculator_scripts()
+{
+    if (is_product()) {
+        wp_enqueue_script(
+            'gl-calculator',
+            get_template_directory_uri() . '/js/calculator.js',
+            array('jquery'),
+            '1.0.0',
+            true
+        );
+    }
 }
-add_action( 'wp_enqueue_scripts', 'enqueue_product_calculator_scripts' );
+add_action('wp_enqueue_scripts', 'enqueue_product_calculator_scripts');
 
 // AJAX обработчик для фильтрации товаров (ИСПРАВЛЕННАЯ ВЕРСИЯ)
-add_action( 'wp_ajax_filter_products', 'ajax_filter_products' );
-add_action( 'wp_ajax_nopriv_filter_products', 'ajax_filter_products' );
+add_action('wp_ajax_filter_products', 'ajax_filter_products');
+add_action('wp_ajax_nopriv_filter_products', 'ajax_filter_products');
 
-function ajax_filter_products() {
+function ajax_filter_products()
+{
     parse_str($_GET['params'], $params);
-    
+
     $current_page = 1;
-    if ( isset( $params['product-page'] ) ) {
-        $current_page = intval( $params['product-page'] );
-    } elseif ( isset( $params['paged'] ) ) {
-        $current_page = intval( $params['paged'] );
+    if (isset($params['product-page'])) {
+        $current_page = intval($params['product-page']);
+    } elseif (isset($params['paged'])) {
+        $current_page = intval($params['paged']);
     }
-    
-    if ( isset( $params['orderby'] ) ) {
+
+    if (isset($params['orderby'])) {
         $_GET['orderby'] = $params['orderby'];
     }
 
@@ -1293,7 +1298,7 @@ function ajax_filter_products() {
     // Базовые аргументы запроса
     $args = array(
         'post_type'      => 'product',
-        'posts_per_page' => get_option( 'posts_per_page' ),
+        'posts_per_page' => get_option('posts_per_page'),
         'post_status'    => 'publish',
         'paged'          => $current_page,
     );
@@ -1302,48 +1307,47 @@ function ajax_filter_products() {
     $ordering_args = WC()->query->get_catalog_ordering_args();
     $args['orderby'] = $ordering_args['orderby'];
     $args['order']   = $ordering_args['order'];
-    
-    if ( isset( $ordering_args['meta_key'] ) ) {
+
+    if (isset($ordering_args['meta_key'])) {
         $args['meta_key'] = $ordering_args['meta_key'];
     }
 
-    if ( isset( $params['category'] ) && !empty( $params['category'] ) ) {
+    if (isset($params['category']) && !empty($params['category'])) {
         $args['tax_query'][] = array(
             'taxonomy' => 'product_cat',
             'field'    => 'term_id',
-            'terms'    => intval( $params['category'] ),
+            'terms'    => intval($params['category']),
         );
     }
 
     $meta_query = array();
 
-    if ( ! empty( $meta_query ) ) {
+    if (! empty($meta_query)) {
         $meta_query['relation'] = 'AND';
         $args['meta_query'] = $meta_query;
     }
 
     // Tax query для атрибутов
     $attribute_tax_query = array();
-    
-    foreach ( $params as $key => $value ) {
-        if ( strpos( $key, 'filter_pa_' ) === 0 ) {
-            $taxonomy = str_replace( 'filter_', '', $key );
-            
-            // Обработка значений - всегда массив
-            if ( is_array( $value ) ) {
-                $terms = array_map( 'sanitize_title', $value );
+
+    foreach ($params as $key => $value) {
+        if (strpos($key, 'filter_pa_') === 0) {
+            $taxonomy = str_replace('filter_', '', $key);
+
+            if (is_array($value)) {
+                $terms = array_map('sanitize_title', $value);
             } else {
-                $terms = array( sanitize_title( $value ) );
+                $terms = array(sanitize_title($value));
             }
-            
-            $terms = array_filter( $terms );
-            
-            if ( ! empty( $terms ) ) {
+
+            $terms = array_filter($terms);
+
+            if (! empty($terms)) {
                 $attribute_tax_query[] = array(
                     'taxonomy' => $taxonomy,
                     'field'    => 'slug',
-                    'terms'    => $terms,
-                    'operator' => 'IN',
+                    'terms'    => array_values($terms),
+                    'operator' => count($terms) > 1 ? 'AND' : 'IN',
                 );
             }
         }
@@ -1351,71 +1355,66 @@ function ajax_filter_products() {
 
     // Собираем итоговый tax_query
     $final_tax_query = array();
-    
-    if ( isset( $args['tax_query'] ) && ! empty( $args['tax_query'] ) ) {
+
+    if (isset($args['tax_query']) && ! empty($args['tax_query'])) {
         $final_tax_query = $args['tax_query'];
     }
-    
-    if ( ! empty( $attribute_tax_query ) ) {
-        if ( count( $attribute_tax_query ) > 1 ) {
-            $attribute_tax_query['relation'] = 'OR';
-            $final_tax_query[] = $attribute_tax_query;
-        } else {
-            $final_tax_query[] = $attribute_tax_query[0];
-        }
+
+    // Каждый атрибут добавляется отдельно — между ними AND
+    foreach ($attribute_tax_query as $single_attr_query) {
+        $final_tax_query[] = $single_attr_query;
     }
-    
-    if ( ! empty( $final_tax_query ) ) {
+
+    if (! empty($final_tax_query)) {
         $final_tax_query['relation'] = 'AND';
         $args['tax_query'] = $final_tax_query;
     }
 
-    $query = new WP_Query( $args );
-    
+    $query = new WP_Query($args);
+
     error_log('Query results: found=' . $query->found_posts . ', max_pages=' . $query->max_num_pages);
 
     global $wp_query, $paged;
-    $old_query = $wp_query; 
-    $wp_query = $query;     
-    $paged = $current_page; 
-    
-    wc_set_loop_prop( 'current_page', $current_page );
-    wc_set_loop_prop( 'is_paginated', true );
-    wc_set_loop_prop( 'page_template', get_page_template_slug() );
-    wc_set_loop_prop( 'per_page', $args['posts_per_page'] );
-    wc_set_loop_prop( 'total', $query->found_posts );
-    wc_set_loop_prop( 'total_pages', $query->max_num_pages );
+    $old_query = $wp_query;
+    $wp_query = $query;
+    $paged = $current_page;
+
+    wc_set_loop_prop('current_page', $current_page);
+    wc_set_loop_prop('is_paginated', true);
+    wc_set_loop_prop('page_template', get_page_template_slug());
+    wc_set_loop_prop('per_page', $args['posts_per_page']);
+    wc_set_loop_prop('total', $query->found_posts);
+    wc_set_loop_prop('total_pages', $query->max_num_pages);
 
     ob_start();
 
-    if ( $query->have_posts() ) {
+    if ($query->have_posts()) {
         woocommerce_product_loop_start();
 
-        while ( $query->have_posts() ) {
+        while ($query->have_posts()) {
             $query->the_post();
-            wc_get_template_part( 'content', 'product' );
+            wc_get_template_part('content', 'product');
         }
 
         woocommerce_product_loop_end();
 
         error_log('Before pagination: max_pages=' . $wp_query->max_num_pages . ', current=' . $paged);
-        
-        if ( $query->max_num_pages > 1 ) {
+
+        if ($query->max_num_pages > 1) {
             error_log('Forcing pagination output');
-            
+
             wc_get_template(
                 'loop/pagination.php',
                 array(
                     'total'   => $query->max_num_pages,
-                    'current' => max( 1, $current_page ),
-                    'base'    => esc_url_raw( add_query_arg( 'paged', '%#%', false ) ),
+                    'current' => max(1, $current_page),
+                    'base'    => esc_url_raw(add_query_arg('paged', '%#%', false)),
                     'format'  => '?paged=%#%',
                 )
             );
         } else {
             error_log('Only 1 page, no pagination needed');
         }
-
     } else {
         echo '<div class="no-products-found">';
         echo '<p>Товары не найдены. Попробуйте изменить параметры фильтрации.</p>';
@@ -1423,37 +1422,38 @@ function ajax_filter_products() {
     }
 
     $wp_query = $old_query;
-    
+
     wp_reset_postdata();
 
     $html = ob_get_clean();
 
-    wp_send_json_success( array(
+    wp_send_json_success(array(
         'html'  => $html,
         'found' => $query->found_posts,
-    ) );
+    ));
 }
 
-add_action( 'wp_ajax_get_price_range', 'ajax_get_price_range' );
-add_action( 'wp_ajax_nopriv_get_price_range', 'ajax_get_price_range' );
+add_action('wp_ajax_get_price_range', 'ajax_get_price_range');
+add_action('wp_ajax_nopriv_get_price_range', 'ajax_get_price_range');
 
-function ajax_get_price_range() {
+function ajax_get_price_range()
+{
     global $wpdb;
 
     $sql = "
         SELECT MIN(CAST(meta_value AS DECIMAL(10,2))) as min_price, 
-               MAX(CAST(meta_value AS DECIMAL(10,2))) as max_price
+            MAX(CAST(meta_value AS DECIMAL(10,2))) as max_price
         FROM {$wpdb->postmeta}
         WHERE meta_key = '_price'
         AND meta_value != ''
     ";
 
-    $results = $wpdb->get_row( $sql );
+    $results = $wpdb->get_row($sql);
 
-    wp_send_json_success( array(
-        'min' => floor( $results->min_price ),
-        'max' => ceil( $results->max_price ),
-    ) );
+    wp_send_json_success(array(
+        'min' => floor($results->min_price),
+        'max' => ceil($results->max_price),
+    ));
 }
 
 add_action('init', function () {
