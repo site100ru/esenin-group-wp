@@ -194,8 +194,34 @@ do_action('woocommerce_before_main_content');
                                     }
                                     
                                     $terms = get_terms( $args );
-                                    
+
                                     if ( $terms && ! is_wp_error( $terms ) ) :
+
+                                        // Пересчитываем count для каждого термина по текущей категории
+                                        if ( $current_category_id > 0 ) {
+                                            global $wpdb;
+                                            foreach ( $terms as $term ) {
+                                                $real_count = $wpdb->get_var( $wpdb->prepare("
+                                                    SELECT COUNT(DISTINCT p.ID)
+                                                    FROM {$wpdb->posts} p
+                                                    INNER JOIN {$wpdb->term_relationships} tr1 ON p.ID = tr1.object_id
+                                                    INNER JOIN {$wpdb->term_taxonomy} tt1 ON tr1.term_taxonomy_id = tt1.term_taxonomy_id
+                                                    INNER JOIN {$wpdb->term_relationships} tr2 ON p.ID = tr2.object_id
+                                                    INNER JOIN {$wpdb->term_taxonomy} tt2 ON tr2.term_taxonomy_id = tt2.term_taxonomy_id
+                                                    WHERE p.post_type = 'product'
+                                                    AND p.post_status = 'publish'
+                                                    AND tt1.taxonomy = 'product_cat'
+                                                    AND tt1.term_id = %d
+                                                    AND tt2.taxonomy = %s
+                                                    AND tt2.term_id = %d
+                                                ", $current_category_id, $taxonomy, $term->term_id ) );
+                                                $term->count = intval( $real_count );
+                                            }
+
+                                            $terms = array_filter( $terms, function( $term ) {
+                                                return $term->count > 0;
+                                            });
+                                        }
                             ?>
                             <div class="filter-group">
                                 <h6 class="filter-title"><?php echo esc_html( $attribute->attribute_label ); ?></h6>
