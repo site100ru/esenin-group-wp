@@ -1435,18 +1435,43 @@ add_action('wp_ajax_nopriv_load_product_filters', 'ajax_load_product_filters');
 function ajax_load_product_filters() {
     $current_category_id = intval( $_GET['category_id'] ?? 0 );
     
+    // Получаем ID товаров категории (включая дочерние)
+    $all_cat_ids = get_term_children( $current_category_id, 'product_cat' );
+    $all_cat_ids[] = $current_category_id;
+    
+    $product_ids = get_posts( array(
+        'post_type'      => 'product',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'tax_query'      => array(
+            array(
+                'taxonomy' => 'product_cat',
+                'field'    => 'term_id',
+                'terms'    => $all_cat_ids,
+                'operator' => 'IN',
+            ),
+        ),
+    ) );
+    
+    if ( empty( $product_ids ) ) {
+        wp_send_json_success( array( 'html' => '' ) );
+        return;
+    }
+    
     $attribute_taxonomies = wc_get_attribute_taxonomies();
     $filters_html = '';
     
     foreach ( $attribute_taxonomies as $attribute ) {
         $taxonomy = wc_attribute_taxonomy_name( $attribute->attribute_name );
         
+        // Только термины которые реально есть у товаров этой категории
         $terms = get_terms( array(
             'taxonomy'   => $taxonomy,
             'hide_empty' => true,
+            'object_ids' => $product_ids,
         ) );
         
-        if ( ! $terms || is_wp_error( $terms ) ) continue;
+        if ( ! $terms || is_wp_error( $terms ) || empty( $terms ) ) continue;
         
         $filters_html .= '<div class="filter-group">';
         $filters_html .= '<h6 class="filter-title">' . esc_html( $attribute->attribute_label ) . '</h6>';
