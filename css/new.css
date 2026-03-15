@@ -1622,4 +1622,5 @@
 .woocommerce nav.woocommerce-pagination ul li a,
 .woocommerce nav.woocommerce-pagination ul li span {
     padding-inline: 12px !important;
+    line-height: 24px;
 }
