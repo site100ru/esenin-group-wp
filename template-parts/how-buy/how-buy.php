@@ -6,7 +6,7 @@
         </div>
 
         <div class="row justify-content-around">
-            <div class="col-lg-3 col-md-6 px-5 mb-5 mb-lg-0">
+            <div class="col-lg-3 col-md-6 mb-5 mb-lg-0">
                 <div class="row align-items-center">
                     <div class="col-6 text-center">
                         <img src="<?php echo get_template_directory_uri(); ?>/img/ico/number-1.svg" class="img-fluid">
@@ -24,7 +24,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6 px-5 mb-5 mb-lg-0">
+            <div class="col-lg-3 col-md-6 mb-5 mb-lg-0">
                 <div class="row align-items-center">
                     <div class="col-6 text-center">
                         <img src="<?php echo get_template_directory_uri(); ?>/img/ico/number-2.svg" class="img-fluid">
@@ -42,7 +42,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6 px-5 mb-5 mb-lg-0">
+            <div class="col-lg-3 col-md-6 mb-5 mb-lg-0">
                 <div class="row align-items-center">
                     <div class="col-6 text-center">
                         <img src="<?php echo get_template_directory_uri(); ?>/img/ico/number-3.svg" class="img-fluid">
@@ -60,7 +60,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6 px-5 mb-5 mb-lg-0">
+            <div class="col-lg-3 col-md-6 mb-5 mb-lg-0">
                 <div class="row align-items-center">
                     <div class="col-6 text-center">
                         <img src="<?php echo get_template_directory_uri(); ?>/img/ico/number-4.svg" class="img-fluid">
