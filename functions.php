@@ -1435,87 +1435,33 @@ add_action('wp_ajax_nopriv_load_product_filters', 'ajax_load_product_filters');
 function ajax_load_product_filters() {
     $current_category_id = intval( $_GET['category_id'] ?? 0 );
     
-    $all_cat_ids = get_term_children( $current_category_id, 'product_cat' );
-    $all_cat_ids[] = $current_category_id;
-    $placeholders = implode( ',', array_fill( 0, count( $all_cat_ids ), '%d' ) );
-    
     $attribute_taxonomies = wc_get_attribute_taxonomies();
     $filters_html = '';
     
-    if ( $attribute_taxonomies ) {
-        global $wpdb;
+    foreach ( $attribute_taxonomies as $attribute ) {
+        $taxonomy = wc_attribute_taxonomy_name( $attribute->attribute_name );
         
-        foreach ( $attribute_taxonomies as $attribute ) {
-            $taxonomy = wc_attribute_taxonomy_name( $attribute->attribute_name );
-            
-            $args = array(
-                'taxonomy'   => $taxonomy,
-                'hide_empty' => true,
-            );
-            
-            if ( $current_category_id > 0 ) {
-                $product_ids = get_posts( array(
-                    'post_type'      => 'product',
-                    'posts_per_page' => -1,
-                    'fields'         => 'ids',
-                    'tax_query'      => array(
-                        array(
-                            'taxonomy' => 'product_cat',
-                            'field'    => 'term_id',
-                            'terms'    => $all_cat_ids,
-                            'operator' => 'IN',
-                        ),
-                    ),
-                ) );
-                
-                if ( ! empty( $product_ids ) ) {
-                    $args['object_ids'] = $product_ids;
-                }
-            }
-            
-            $terms = get_terms( $args );
-            
-            if ( ! $terms || is_wp_error( $terms ) ) continue;
-            
-            // Пересчитываем count
-            if ( $current_category_id > 0 ) {
-                foreach ( $terms as $term ) {
-                    $real_count = $wpdb->get_var( $wpdb->prepare("
-                        SELECT COUNT(DISTINCT p.ID)
-                        FROM {$wpdb->posts} p
-                        INNER JOIN {$wpdb->term_relationships} tr1 ON p.ID = tr1.object_id
-                        INNER JOIN {$wpdb->term_taxonomy} tt1 ON tr1.term_taxonomy_id = tt1.term_taxonomy_id
-                        INNER JOIN {$wpdb->term_relationships} tr2 ON p.ID = tr2.object_id
-                        INNER JOIN {$wpdb->term_taxonomy} tt2 ON tr2.term_taxonomy_id = tt2.term_taxonomy_id
-                        WHERE p.post_type = 'product'
-                        AND p.post_status = 'publish'
-                        AND tt1.taxonomy = 'product_cat'
-                        AND tt1.term_id IN ($placeholders)
-                        AND tt2.taxonomy = %s
-                        AND tt2.term_id = %d
-                    ", array_merge( $all_cat_ids, array( $taxonomy, $term->term_id ) ) ) );
-                    $term->count = intval( $real_count );
-                }
-                $terms = array_filter( $terms, fn($t) => $t->count > 0 );
-            }
-            
-            if ( empty( $terms ) ) continue;
-            
-            $filters_html .= '<div class="filter-group">';
-            $filters_html .= '<h6 class="filter-title">' . esc_html( $attribute->attribute_label ) . '</h6>';
-            $filters_html .= '<div class="filter-options">';
-            
-            foreach ( $terms as $term ) {
-                $filters_html .= '<div class="form-check">';
-                $filters_html .= '<input class="form-check-input filter-checkbox" type="checkbox" name="filter_' . esc_attr( $taxonomy ) . '[]" value="' . esc_attr( $term->slug ) . '" id="filter_' . esc_attr( $taxonomy . '_' . $term->term_id ) . '">';
-                $filters_html .= '<label class="form-check-label" for="filter_' . esc_attr( $taxonomy . '_' . $term->term_id ) . '">';
-                $filters_html .= esc_html( $term->name ) . ' <span class="count">(' . $term->count . ')</span>';
-                $filters_html .= '</label>';
-                $filters_html .= '</div>';
-            }
-            
-            $filters_html .= '</div></div>';
+        $terms = get_terms( array(
+            'taxonomy'   => $taxonomy,
+            'hide_empty' => true,
+        ) );
+        
+        if ( ! $terms || is_wp_error( $terms ) ) continue;
+        
+        $filters_html .= '<div class="filter-group">';
+        $filters_html .= '<h6 class="filter-title">' . esc_html( $attribute->attribute_label ) . '</h6>';
+        $filters_html .= '<div class="filter-options">';
+        
+        foreach ( $terms as $term ) {
+            $filters_html .= '<div class="form-check">';
+            $filters_html .= '<input class="form-check-input filter-checkbox" type="checkbox" name="filter_' . esc_attr( $taxonomy ) . '[]" value="' . esc_attr( $term->slug ) . '" id="filter_' . esc_attr( $taxonomy . '_' . $term->term_id ) . '">';
+            $filters_html .= '<label class="form-check-label" for="filter_' . esc_attr( $taxonomy . '_' . $term->term_id ) . '">';
+            $filters_html .= esc_html( $term->name );
+            $filters_html .= '</label>';
+            $filters_html .= '</div>';
         }
+        
+        $filters_html .= '</div></div>';
     }
     
     wp_send_json_success( array( 'html' => $filters_html ) );
