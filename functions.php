@@ -1257,23 +1257,6 @@ function enqueue_product_filters_scripts()
     }
 }
 
-/**
- * Подключение скрипта калькулятора товаров
- */
-function enqueue_product_calculator_scripts()
-{
-    if (is_product()) {
-        wp_enqueue_script(
-            'gl-calculator',
-            get_template_directory_uri() . '/js/calculator.js',
-            array('jquery'),
-            '1.0.0',
-            true
-        );
-    }
-}
-add_action('wp_enqueue_scripts', 'enqueue_product_calculator_scripts');
-
 // AJAX обработчик для фильтрации товаров (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 add_action('wp_ajax_filter_products', 'ajax_filter_products');
 add_action('wp_ajax_nopriv_filter_products', 'ajax_filter_products');

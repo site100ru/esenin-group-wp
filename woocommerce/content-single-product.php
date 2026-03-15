@@ -178,7 +178,7 @@ if ( post_password_required() ) {
 
                             <div class="calculator-field">
                                 <label for="calc-area">Объем/площадь:</label>
-                                <input type="number" id="calc-area" class="calc-area-input" value="1" min="0" step="0.01">
+                                <input type="number" id="calc-area" class="calc-area-input" value="1" min="1" step="1">
                             </div>
 
                             <div class="calculator-field">
