@@ -1,12 +1,10 @@
 jQuery(document).ready(function ($) {
     'use strict';
 
-    // Переменные для dropdown'ов
     const $filtersButton = $('.filters-button');
     const $filtersContent = $('.filters-dropdown-content');
     const $sortingButton = $('.sorting-button');
     const $sortingContent = $('.sorting-dropdown-content');
-
 
     // Открытие/закрытие dropdown фильтров
     $filtersButton.on('click', function (e) {
@@ -35,11 +33,9 @@ jQuery(document).ready(function ($) {
     function getFilterParams() {
         const params = new URLSearchParams();
 
-        // Получаем все чекбоксы фильтров
         $('.filter-checkbox:checked').each(function () {
             const name = $(this).attr('name');
             const value = $(this).val();
-
             if (name.endsWith('[]')) {
                 const baseName = name.replace('[]', '');
                 params.append(baseName + '[]', value);
@@ -119,119 +115,30 @@ jQuery(document).ready(function ($) {
         });
     }
 
-    $('.apply-filters-btn').on('click', function () {
-        loadProducts(true, true); // Сбрасываем пагинацию
+    $(document).on('click', '.apply-filters-btn', function () {
+        loadProducts(true, true);
         $filtersContent.removeClass('show');
+    });
+
+    $(document).on('click', '.reset-filters-btn', function () {
+        $('.filter-checkbox').prop('checked', false);
+        $('.sorting-option').removeClass('selected');
+        $('.sorting-option[data-sort="menu_order"]').addClass('selected');
+        $('.sorting-button span').text('Сортировка: По умолчанию');
+        loadProducts(true, true);
     });
 
     $('.sorting-option').on('click', function () {
         const sortValue = $(this).data('sort');
-
         $('.sorting-option').removeClass('selected');
         $(this).addClass('selected');
-
         const sortLabel = $(this).text();
         $('.sorting-button span').text('Сортировка: ' + sortLabel);
-
         $sortingContent.removeClass('show');
-
         loadProducts(true, true);
     });
 
-    $('.reset-filters-btn').on('click', function () {
-        $('.filter-checkbox').prop('checked', false);
-
-        $('.sorting-option').removeClass('selected');
-        $('.sorting-option[data-sort="menu_order"]').addClass('selected');
-        $('.sorting-button span').text('Сортировка: По умолчанию');
-
-        loadProducts(true, true);
-    });
-
-    window.addEventListener('popstate', function () {
-        location.reload();
-    });
-
-    $(document).on('click', '.woocommerce-pagination a', function (e) {
-        e.preventDefault();
-
-        const url = $(this).attr('href');
-        let page = 1;
-
-        const pageMatch = url.match(/\/page\/(\d+)\/?/);
-        if (pageMatch) {
-            page = parseInt(pageMatch[1]);
-        } else {
-            const urlObj = new URL(url, window.location.origin);
-            page = urlObj.searchParams.get('product-page') ||
-                urlObj.searchParams.get('paged') || 1;
-        }
-
-        const params = getFilterParams();
-
-        if (page > 1) {
-            params.set('paged', page);
-        } else {
-            params.delete('paged');
-        }
-
-        // Показываем лоадер
-        $('#products-container').fadeTo(300, 0.3);
-        $('#products-loader').show();
-
-        $.ajax({
-            url: wc_ajax_params.ajax_url,
-            type: 'GET',
-            data: {
-                action: 'filter_products',
-                params: params.toString()
-            },
-            success: function (response) {
-                if (response.success) {
-                    $('#products-container').html(response.data.html);
-
-                    if (window.history.replaceState) {
-                        const baseURL = window.location.pathname;
-                        window.history.replaceState({}, '', baseURL);
-                    }
-
-                    // Скроллим к началу товаров
-                    $('html, body').animate({
-                        scrollTop: $('.products-section').offset().top - 100
-                    }, 500);
-                }
-            },
-            complete: function () {
-                $('#products-loader').hide();
-                $('#products-container').fadeTo(300, 1);
-            }
-        });
-    });
-
-    function initFiltersFromURL() {
-        const urlParams = new URLSearchParams(window.location.search);
-        let hasFilters = false;
-
-        // Проверяем наличие параметров фильтров
-        for (let [key, value] of urlParams.entries()) {
-            const cleanKey = key.replace('[]', '');
-
-            if (cleanKey.startsWith('filter_pa_')) {
-                hasFilters = true;
-
-                const checkboxes = $('input[name="' + cleanKey + '[]"][value="' + value + '"]');
-                checkboxes.prop('checked', true);
-            }
-        }
-
-        if (hasFilters) {
-            console.log('Обнаружены фильтры в URL, применяем автоматически...');
-            setTimeout(function () {
-                loadProducts(false, false);
-            }, 100);
-        }
-    }
-
+    // Пагинация
     $(document).on('click', '.woocommerce-pagination a', function (e) {
         e.preventDefault();
 
@@ -287,7 +194,55 @@ jQuery(document).ready(function ($) {
         });
     });
 
-    // Вызываем инициализацию при загрузке страницы
-    initFiltersFromURL();
+    window.addEventListener('popstate', function () {
+        location.reload();
+    });
+
+    // Загружаем фильтры через AJAX
+    function loadFilters() {
+        const bodyClass = $('body').attr('class') || '';
+        const categoryMatch = bodyClass.match(/term-(\d+)/);
+        const categoryId = categoryMatch ? categoryMatch[1] : 0;
+
+        $.ajax({
+            url: wc_ajax_params.ajax_url,
+            type: 'GET',
+            data: {
+                action: 'load_product_filters',
+                category_id: categoryId
+            },
+            success: function (response) {
+                if (response.success && response.data.html) {
+                    $('#product-filters-form').html(response.data.html);
+                    $('#filters-skeleton').hide();
+                    $('#product-filters-form').show();
+
+                    initFiltersFromURL();
+                }
+            }
+        });
+    }
+
+    function initFiltersFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let hasFilters = false;
+
+        for (let [key, value] of urlParams.entries()) {
+            const cleanKey = key.replace('[]', '');
+            if (cleanKey.startsWith('filter_pa_')) {
+                hasFilters = true;
+                const checkboxes = $('input[name="' + cleanKey + '[]"][value="' + value + '"]');
+                checkboxes.prop('checked', true);
+            }
+        }
+
+        if (hasFilters) {
+            setTimeout(function () {
+                loadProducts(false, false);
+            }, 100);
+        }
+    }
+
+    loadFilters();
 
 });

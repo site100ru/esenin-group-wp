@@ -149,114 +149,26 @@ do_action('woocommerce_before_main_content');
                         <span>Фильтры</span>
                     </button>
                     <div class="filters-dropdown-content">
-                        <form id="product-filters-form" class="filters-grid">
-                            
-                            <?php
-                            // Получаем текущую категорию
-                            $current_category_id = 0;
-                            if ( is_product_category() ) {
-                                $current_term = get_queried_object();
-                                $current_category_id = $current_term->term_id;
-                            }
-                            
-                            // Получаем все атрибуты товаров
-                            $attribute_taxonomies = wc_get_attribute_taxonomies();
-                            
-                            if ( $attribute_taxonomies ) :
-                                foreach ( $attribute_taxonomies as $attribute ) :
-                                    $taxonomy = wc_attribute_taxonomy_name( $attribute->attribute_name );
-                                    
-                                    // Получаем термины атрибута для текущей категории
-                                    $args = array(
-                                        'taxonomy'   => $taxonomy,
-                                        'hide_empty' => true,
-                                    );
-                                    
-                                    // Если в категории - фильтруем по товарам этой категории
-                                    if ( $current_category_id > 0 ) {
-                                        // Получаем ID товаров текущей категории
-                                        $product_ids = get_posts( array(
-                                            'post_type'      => 'product',
-                                            'posts_per_page' => -1,
-                                            'fields'         => 'ids',
-                                            'tax_query'      => array(
-                                                array(
-                                                    'taxonomy' => 'product_cat',
-                                                    'field'    => 'term_id',
-                                                    'terms'    => $current_category_id,
-                                                ),
-                                            ),
-                                        ) );
-                                        
-                                        if ( ! empty( $product_ids ) ) {
-                                            $args['object_ids'] = $product_ids;
-                                        }
-                                    }
-                                    
-                                    $terms = get_terms( $args );
-
-                                    if ( $terms && ! is_wp_error( $terms ) ) :
-
-                                        // Пересчитываем count для каждого термина по текущей категории
-                                        if ( $current_category_id > 0 ) {
-                                            global $wpdb;
-                                            
-                                            // Получаем все дочерние категории (любая глубина вложенности)
-                                            $all_cat_ids = get_term_children( $current_category_id, 'product_cat' );
-                                            $all_cat_ids[] = $current_category_id;
-                                            $placeholders = implode( ',', array_fill( 0, count( $all_cat_ids ), '%d' ) );
-                                            
-                                            foreach ( $terms as $term ) {
-                                                $real_count = $wpdb->get_var( $wpdb->prepare("
-                                                    SELECT COUNT(DISTINCT p.ID)
-                                                    FROM {$wpdb->posts} p
-                                                    INNER JOIN {$wpdb->term_relationships} tr1 ON p.ID = tr1.object_id
-                                                    INNER JOIN {$wpdb->term_taxonomy} tt1 ON tr1.term_taxonomy_id = tt1.term_taxonomy_id
-                                                    INNER JOIN {$wpdb->term_relationships} tr2 ON p.ID = tr2.object_id
-                                                    INNER JOIN {$wpdb->term_taxonomy} tt2 ON tr2.term_taxonomy_id = tt2.term_taxonomy_id
-                                                    WHERE p.post_type = 'product'
-                                                    AND p.post_status = 'publish'
-                                                    AND tt1.taxonomy = 'product_cat'
-                                                    AND tt1.term_id IN ($placeholders)
-                                                    AND tt2.taxonomy = %s
-                                                    AND tt2.term_id = %d
-                                                ", array_merge( $all_cat_ids, array( $taxonomy, $term->term_id ) ) ) );
-                                                $term->count = intval( $real_count );
-                                            }
-                                            // Убираем термины с нулевым count
-                                            $terms = array_filter( $terms, function( $term ) {
-                                                return $term->count > 0;
-                                            });
-                                        }
-                            ?>
-                            <div class="filter-group">
-                                <h6 class="filter-title"><?php echo esc_html( $attribute->attribute_label ); ?></h6>
-                                <div class="filter-options">
-                                    <?php foreach ( $terms as $term ) : ?>
-                                    <div class="form-check">
-                                        <input 
-                                            class="form-check-input filter-checkbox" 
-                                            type="checkbox" 
-                                            name="filter_<?php echo esc_attr( $taxonomy ); ?>[]" 
-                                            value="<?php echo esc_attr( $term->slug ); ?>" 
-                                            id="filter_<?php echo esc_attr( $taxonomy . '_' . $term->term_id ); ?>"
-                                            <?php checked( in_array( $term->slug, isset( $_GET['filter_' . $taxonomy] ) ? (array) $_GET['filter_' . $taxonomy] : array() ) ); ?>
-                                        >
-                                        <label class="form-check-label" for="filter_<?php echo esc_attr( $taxonomy . '_' . $term->term_id ); ?>">
-                                            <?php echo esc_html( $term->name ); ?>
-                                            <span class="count">(<?php echo $term->count; ?>)</span>
-                                        </label>
-                                    </div>
-                                    <?php endforeach; ?>
-                                </div>
+                        <div id="filters-skeleton" class="filters-grid">
+                            <div class="filter-skeleton-group">
+                                <div class="skeleton skeleton-title"></div>
+                                <div class="skeleton skeleton-item"></div>
+                                <div class="skeleton skeleton-item"></div>
+                                <div class="skeleton skeleton-item"></div>
                             </div>
-                            <?php 
-                                    endif;
-                                endforeach;
-                            endif;
-                            ?>
-
-                        </form>
+                            <div class="filter-skeleton-group">
+                                <div class="skeleton skeleton-title"></div>
+                                <div class="skeleton skeleton-item"></div>
+                                <div class="skeleton skeleton-item"></div>
+                                <div class="skeleton skeleton-item"></div>
+                            </div>
+                            <div class="filter-skeleton-group">
+                                <div class="skeleton skeleton-title"></div>
+                                <div class="skeleton skeleton-item"></div>
+                                <div class="skeleton skeleton-item"></div>
+                            </div>
+                        </div>
+                        <form id="product-filters-form" class="filters-grid" style="display:none;"></form>
                         
                         <!-- Кнопка Применить -->
                         <button class="btn btn-corporate-color-1 apply-filters-btn" type="button">Применить</button>
