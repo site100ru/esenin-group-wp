@@ -453,6 +453,7 @@
     font-size: 14px;
     font-weight: 500;
     font-family: var(--font-family);
+    line-height: 1;
 }
 
 .nav-scroller .nav .nav-item a.nav-link.active,
