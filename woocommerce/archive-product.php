@@ -200,6 +200,12 @@ do_action('woocommerce_before_main_content');
                                         // Пересчитываем count для каждого термина по текущей категории
                                         if ( $current_category_id > 0 ) {
                                             global $wpdb;
+                                            
+                                            // Получаем все дочерние категории (любая глубина вложенности)
+                                            $all_cat_ids = get_term_children( $current_category_id, 'product_cat' );
+                                            $all_cat_ids[] = $current_category_id;
+                                            $placeholders = implode( ',', array_fill( 0, count( $all_cat_ids ), '%d' ) );
+                                            
                                             foreach ( $terms as $term ) {
                                                 $real_count = $wpdb->get_var( $wpdb->prepare("
                                                     SELECT COUNT(DISTINCT p.ID)
@@ -211,13 +217,13 @@ do_action('woocommerce_before_main_content');
                                                     WHERE p.post_type = 'product'
                                                     AND p.post_status = 'publish'
                                                     AND tt1.taxonomy = 'product_cat'
-                                                    AND tt1.term_id = %d
+                                                    AND tt1.term_id IN ($placeholders)
                                                     AND tt2.taxonomy = %s
                                                     AND tt2.term_id = %d
-                                                ", $current_category_id, $taxonomy, $term->term_id ) );
+                                                ", array_merge( $all_cat_ids, array( $taxonomy, $term->term_id ) ) ) );
                                                 $term->count = intval( $real_count );
                                             }
-
+                                            // Убираем термины с нулевым count
                                             $terms = array_filter( $terms, function( $term ) {
                                                 return $term->count > 0;
                                             });
