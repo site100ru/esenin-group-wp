@@ -91,17 +91,26 @@ do_action('woocommerce_before_main_content');
         </div>
 
         <?php
-        // Если это родительская категория - показываем подкатегории как табы
         if ( is_product_category() ) {
-            $current_term = get_queried_object();
-            
-            // Получаем подкатегории
+
+            $current_term    = get_queried_object();
+            $tab_parent_id   = $current_term->term_id;
+
+        } elseif ( is_shop() ) {
+
+            $tab_parent_id = 0;
+
+        } else {
+            $tab_parent_id = null;
+        }
+
+        if ( $tab_parent_id !== null ) :
             $subcategories = get_terms( array(
-                'taxonomy' => 'product_cat',
-                'parent' => $current_term->term_id,
+                'taxonomy'   => 'product_cat',
+                'parent'     => $tab_parent_id,
                 'hide_empty' => true,
             ) );
-            
+
             if ( ! empty( $subcategories ) && ! is_wp_error( $subcategories ) ) :
         ?>
         <div class="row">
@@ -136,8 +145,8 @@ do_action('woocommerce_before_main_content');
             </div>
         </div>
         <?php 
-            endif;
-        }
+            endif; // subcategories not empty
+        endif;     // tab_parent_id !== null
         ?>
 
         <!-- ========== ФИЛЬТРЫ И СОРТИРОВКА ========== -->
@@ -249,35 +258,36 @@ do_action('woocommerce_before_main_content');
 <!-- ========== ТОВАРЫ ========== -->
 
 <!-- ========== ТЕКСТОВЫЙ БЛОК  ========== -->
+<?php
+// Описание: для категории берём term_description(), для /shop/ — содержимое страницы магазина
+$cat_description = '';
+$cat_title       = '';
+
+if ( is_product_category() ) {
+    $current_term    = get_queried_object();
+    $cat_description = term_description( $current_term->term_id, 'product_cat' );
+    $cat_title       = $current_term->name;
+} elseif ( is_shop() ) {
+    $shop_page       = get_post( wc_get_page_id( 'shop' ) );
+    $cat_description = $shop_page ? apply_filters( 'the_content', $shop_page->post_content ) : '';
+    $cat_title       = get_the_title( wc_get_page_id( 'shop' ) );
+}
+
+if ( $cat_description ) : ?>
 <section class="section bg-light">
     <div class="container">
         <div class="section-title-wrapper">
-            <h2 class="section-title">Купить лицевой кирпич: идеальный выбор для вашего фасада</h2>
+            <h2 class="section-title"><?php echo esc_html( $cat_title ); ?></h2>
             <div class="title-underline"></div>
         </div>
-
-
         <div class="row">
             <div class="col">
-                <p>
-                    В Компании «Есенин групп» вы найдете лучший облицовочный кирпич для реализации любых архитектурных проектов. Это не просто материал — это долговечность, эстетика и защита вашего дома. У нас можно купить облицовочный кирпич классических и современных форматов, в цветах от терракотового до графитового, с фактурой под камень, дерево или глянец.
-                </p>
-
-                <p>
-                    <b>
-                        Почему выбирают облицовочный кирпич:
-                    </b>
-                </p>
-                <ul>
-                    <li>Срок службы кирпича — 50+ лет. </li>
-                    <li>Устойчивость к морозам, влаге и УФ-лучам.</li>
-                    <li>Энергоэффективность — сохраняет тепло зимой и прохладу летом. </li>
-                    <li>Широкий выбор текстур и цветов для любого стиля: от лофта до классики.</li>
-                </ul>
+                <?php echo wp_kses_post( $cat_description ); ?>
             </div>
         </div>
     </div>
 </section>
+<?php endif; ?>
 <!-- ========== ТЕКСТОВЫЙ БЛОК  ========== -->
 
 
