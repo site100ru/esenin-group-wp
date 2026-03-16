@@ -946,29 +946,67 @@ function ajax_get_price_range()
 }
 /*** END AJAX: ФИЛЬТРАЦИЯ ТОВАРОВ ***/
 
-
-/*** AJAX: ЗАГРУЗКА ФИЛЬТРОВ ***/
-
-function mytheme_get_filters_for_category(int $category_id): string
+/**
+ * Создание таблицы wp_product_attribute_index при первой загрузке темы
+ */
+add_action('after_setup_theme', 'mytheme_create_attribute_index_table');
+function mytheme_create_attribute_index_table()
 {
-    $cache_key = 'mytheme_filters_v2_' . $category_id;
-    $cached    = get_transient($cache_key);
-    if ($cached !== false) return $cached;
-
     global $wpdb;
+    $table   = $wpdb->prefix . 'product_attribute_index';
+    $charset = $wpdb->get_charset_collate();
 
-    $cat_ids   = get_term_children($category_id, 'product_cat');
-    $cat_ids[] = $category_id;
-    $cat_ids   = array_map('intval', array_filter($cat_ids));
-    $cat_in    = implode(',', $cat_ids);
+    // Создаём только если таблицы ещё нет
+    if ($wpdb->get_var("SHOW TABLES LIKE '$table'") === $table) return;
 
-    // Один SQL запрос — все атрибуты и термины текущей категории
+    $wpdb->query("
+        CREATE TABLE $table (
+            id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            category_id BIGINT UNSIGNED NOT NULL,
+            taxonomy    VARCHAR(64)     NOT NULL,
+            term_id     BIGINT UNSIGNED NOT NULL,
+            term_name   VARCHAR(255)    NOT NULL,
+            term_slug   VARCHAR(255)    NOT NULL,
+            PRIMARY KEY (id),
+            INDEX idx_category (category_id),
+            UNIQUE KEY unique_row (category_id, taxonomy, term_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 $charset
+    ");
+}
+
+
+/**
+ * Перестройка индекса одной категории (вызывается батчами через cron)
+ */
+add_action('mytheme_rebuild_index_batch', 'mytheme_rebuild_index_batch');
+function mytheme_rebuild_index_batch()
+{
+    global $wpdb;
+    $table = $wpdb->prefix . 'product_attribute_index';
+    $queue = get_option('mytheme_index_queue', []);
+
+    if (empty($queue)) {
+        delete_option('mytheme_index_rebuilding');
+        return;
+    }
+
+    // Берём одну категорию из очереди
+    $cat_id = array_shift($queue);
+    update_option('mytheme_index_queue', $queue, false);
+
+    $cat_ids   = get_term_children($cat_id, 'product_cat');
+    $cat_ids[] = (int) $cat_id;
+    $cat_in    = implode(',', array_map('intval', $cat_ids));
+
+    // Удаляем старые данные только для этой категории
+    $wpdb->delete($table, ['category_id' => $cat_id]);
+
+    // Один SQL — все атрибуты и термины для этой категории
     $rows = $wpdb->get_results(
         "SELECT DISTINCT t.term_id, t.name, t.slug, tt.taxonomy
          FROM {$wpdb->terms} t
          INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = t.term_id
          WHERE tt.taxonomy LIKE 'pa_%'
-           AND tt.count > 0
            AND EXISTS (
                SELECT 1
                FROM {$wpdb->term_relationships} tr1
@@ -977,27 +1015,113 @@ function mytheme_get_filters_for_category(int $category_id): string
                WHERE tr1.term_taxonomy_id = tt.term_taxonomy_id
                  AND tt2.taxonomy = 'product_cat'
                  AND tt2.term_id IN ($cat_in)
-           )
-         ORDER BY tt.taxonomy, t.name"
+           )"
     );
 
-    if (empty($rows)) {
-        set_transient($cache_key, '', 12 * HOUR_IN_SECONDS);
-        return '';
+    foreach ($rows as $row) {
+        $wpdb->replace($table, [
+            'category_id' => $cat_id,
+            'taxonomy'    => $row->taxonomy,
+            'term_id'     => $row->term_id,
+            'term_name'   => $row->name,
+            'term_slug'   => $row->slug,
+        ]);
     }
 
-    // Группируем по таксономии
+    // Если в очереди ещё есть категории — запускаем следующий батч через 5 сек
+    if (!empty($queue)) {
+        wp_schedule_single_event(time() + 5, 'mytheme_rebuild_index_batch');
+    }
+}
+
+
+/**
+ * Запуск полной перестройки индекса (все категории в очередь)
+ */
+function mytheme_start_index_rebuild()
+{
+    $categories = get_terms([
+        'taxonomy'   => 'product_cat',
+        'hide_empty' => true,
+        'fields'     => 'ids',
+    ]);
+
+    if (empty($categories)) return;
+
+    update_option('mytheme_index_queue',      array_map('intval', $categories), false);
+    update_option('mytheme_index_rebuilding', 1, false);
+
+    // Запускаем первый батч через 1 секунду
+    wp_schedule_single_event(time() + 1, 'mytheme_rebuild_index_batch');
+}
+
+
+/**
+ * Ночной cron — полная перестройка в 3:00
+ */
+add_action('wp', 'mytheme_schedule_filters_cron');
+function mytheme_schedule_filters_cron()
+{
+    if (!wp_next_scheduled('mytheme_rebuild_filters_cron')) {
+        wp_schedule_event(strtotime('tomorrow 03:00'), 'daily', 'mytheme_rebuild_filters_cron');
+    }
+}
+add_action('mytheme_rebuild_filters_cron', 'mytheme_start_index_rebuild');
+
+
+/**
+ * При сохранении товара — перестраиваем только его категории.
+ * Защита от массового импорта (WP CLI и импорт игнорируются).
+ */
+add_action('save_post_product', 'mytheme_reindex_product_categories', 20);
+function mytheme_reindex_product_categories($product_id)
+{
+    if (defined('WP_CLI') || doing_action('import')) return;
+
+    $terms = get_the_terms($product_id, 'product_cat');
+    if (empty($terms) || is_wp_error($terms)) return;
+
+    $queue = get_option('mytheme_index_queue', []);
+    foreach ($terms as $term) {
+        if (!in_array($term->term_id, $queue, true)) {
+            $queue[] = $term->term_id;
+        }
+    }
+    update_option('mytheme_index_queue', $queue, false);
+
+    if (!wp_next_scheduled('mytheme_rebuild_index_batch')) {
+        wp_schedule_single_event(time() + 30, 'mytheme_rebuild_index_batch');
+    }
+}
+
+
+/**
+ * Получить HTML фильтров из индексной таблицы — один лёгкий SELECT
+ */
+function mytheme_get_filters_for_category(int $category_id): string
+{
+    global $wpdb;
+    $table = $wpdb->prefix . 'product_attribute_index';
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+        "SELECT taxonomy, term_id, term_name, term_slug
+         FROM $table
+         WHERE category_id = %d
+         ORDER BY taxonomy, term_name",
+        $category_id
+    ));
+
+    if (empty($rows)) return '';
+
+    // Метки атрибутов
+    $labels = [];
+    foreach (wc_get_attribute_taxonomies() as $attr) {
+        $labels[wc_attribute_taxonomy_name($attr->attribute_name)] = $attr->attribute_label;
+    }
+
     $grouped = [];
     foreach ($rows as $row) {
         $grouped[$row->taxonomy][] = $row;
-    }
-
-    // Метки атрибутов
-    $attribute_taxonomies = wc_get_attribute_taxonomies();
-    $labels = [];
-    foreach ($attribute_taxonomies as $attr) {
-        $tax          = wc_attribute_taxonomy_name($attr->attribute_name);
-        $labels[$tax] = $attr->attribute_label;
     }
 
     $output = '';
@@ -1012,34 +1136,23 @@ function mytheme_get_filters_for_category(int $category_id): string
             $output  .= '<div class="form-check">';
             $output  .= '<input class="form-check-input filter-checkbox" type="checkbox"'
                       . ' name="filter_' . esc_attr($taxonomy) . '[]"'
-                      . ' value="' . esc_attr($term->slug) . '"'
+                      . ' value="' . esc_attr($term->term_slug) . '"'
                       . ' id="' . $input_id . '">';
             $output  .= '<label class="form-check-label" for="' . $input_id . '">'
-                      . esc_html($term->name) . '</label>';
+                      . esc_html($term->term_name) . '</label>';
             $output  .= '</div>';
         }
 
         $output .= '</div></div>';
     }
 
-    set_transient($cache_key, $output, 12 * HOUR_IN_SECONDS);
     return $output;
 }
 
-// Сброс кеша фильтров при изменении товара
-add_action('save_post_product',          'mytheme_flush_filters_cache');
-add_action('woocommerce_update_product', 'mytheme_flush_filters_cache');
-function mytheme_flush_filters_cache()
-{
-    global $wpdb;
-    $wpdb->query(
-        "DELETE FROM {$wpdb->options}
-         WHERE option_name LIKE '_transient_mytheme_filters_v2_%'
-            OR option_name LIKE '_transient_timeout_mytheme_filters_v2_%'"
-    );
-}
 
-// AJAX-обработчик загрузки фильтров
+/**
+ * AJAX-обработчик загрузки фильтров
+ */
 add_action('wp_ajax_load_product_filters',        'ajax_load_product_filters');
 add_action('wp_ajax_nopriv_load_product_filters', 'ajax_load_product_filters');
 
@@ -1050,7 +1163,15 @@ function ajax_load_product_filters()
     wp_send_json_success(array('html' => $html));
 }
 
-/*** END AJAX: ЗАГРУЗКА ФИЛЬТРОВ ***/
+
+add_action('init', function () {
+    if (isset($_GET['rebuild_filters']) && current_user_can('manage_options')) {
+        mytheme_start_index_rebuild();
+        wp_die('✅ Перестройка индекса запущена батчами. Займёт несколько минут — зайдите позже и проверьте фильтры.');
+    }
+});
+
+/*** END ИНДЕКС АТРИБУТОВ ***/
 
 
 /*** КАСТОМНОЕ ОПИСАНИЕ КАТЕГОРИИ (TinyMCE) ***/
