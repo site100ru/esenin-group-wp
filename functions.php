@@ -1429,67 +1429,95 @@ function ajax_get_price_range()
 }
 
 
-add_action('wp_ajax_load_product_filters', 'ajax_load_product_filters');
-add_action('wp_ajax_nopriv_load_product_filters', 'ajax_load_product_filters');
+/**
+ * Быстрое получение атрибутов категории через прямой SQL
+ * Без загрузки всех ID товаров в PHP
+ */
+function mytheme_get_filters_for_category( int $category_id ): string {
+    $cache_key = 'mytheme_filters_v2_' . $category_id;
+    $cached    = get_transient( $cache_key );
+    if ( $cached !== false ) return $cached;
 
-function ajax_load_product_filters() {
-    $current_category_id = intval( $_GET['category_id'] ?? 0 );
-    
-    // Получаем ID товаров категории (включая дочерние)
-    $all_cat_ids = get_term_children( $current_category_id, 'product_cat' );
-    $all_cat_ids[] = $current_category_id;
-    
-    $product_ids = get_posts( array(
-        'post_type'      => 'product',
-        'posts_per_page' => -1,
-        'fields'         => 'ids',
-        'tax_query'      => array(
-            array(
-                'taxonomy' => 'product_cat',
-                'field'    => 'term_id',
-                'terms'    => $all_cat_ids,
-                'operator' => 'IN',
-            ),
-        ),
-    ) );
-    
-    if ( empty( $product_ids ) ) {
-        wp_send_json_success( array( 'html' => '' ) );
-        return;
-    }
-    
+    global $wpdb;
+
+    // Все ID категорий (текущая + дочерние)
+    $cat_ids   = get_term_children( $category_id, 'product_cat' );
+    $cat_ids[] = $category_id;
+    $cat_ids   = array_map( 'intval', array_filter( $cat_ids ) );
+    $cat_in    = implode( ',', $cat_ids );
+
+    // Все таксономии атрибутов
     $attribute_taxonomies = wc_get_attribute_taxonomies();
-    $filters_html = '';
-    
+    if ( empty( $attribute_taxonomies ) ) return '';
+
+    $output = '';
+
     foreach ( $attribute_taxonomies as $attribute ) {
         $taxonomy = wc_attribute_taxonomy_name( $attribute->attribute_name );
-        
-        // Только термины которые реально есть у товаров этой категории
-        $terms = get_terms( array(
-            'taxonomy'   => $taxonomy,
-            'hide_empty' => true,
-            'object_ids' => $product_ids,
+
+        // Прямой SQL: термины атрибута, которые реально есть у товаров категории
+        // Один JOIN вместо загрузки тысяч post_id в PHP
+        $terms = $wpdb->get_results( $wpdb->prepare(
+            "SELECT DISTINCT t.term_id, t.name, t.slug
+             FROM {$wpdb->terms} t
+             INNER JOIN {$wpdb->term_taxonomy} tt  ON tt.term_id       = t.term_id
+             INNER JOIN {$wpdb->term_relationships} tr1 ON tr1.term_taxonomy_id = tt.term_taxonomy_id
+             INNER JOIN {$wpdb->term_relationships} tr2 ON tr2.object_id        = tr1.object_id
+             INNER JOIN {$wpdb->term_taxonomy} tt2 ON tt2.term_taxonomy_id  = tr2.term_taxonomy_id
+                                                   AND tt2.taxonomy         = 'product_cat'
+                                                   AND tt2.term_id          IN ($cat_in)
+             WHERE tt.taxonomy = %s
+             ORDER BY t.name",
+            $taxonomy
         ) );
-        
-        if ( ! $terms || is_wp_error( $terms ) || empty( $terms ) ) continue;
-        
-        $filters_html .= '<div class="filter-group">';
-        $filters_html .= '<h6 class="filter-title">' . esc_html( $attribute->attribute_label ) . '</h6>';
-        $filters_html .= '<div class="filter-options">';
-        
+
+        if ( empty( $terms ) ) continue;
+
+        $output .= '<div class="filter-group">';
+        $output .= '<h6 class="filter-title">' . esc_html( $attribute->attribute_label ) . '</h6>';
+        $output .= '<div class="filter-options">';
+
         foreach ( $terms as $term ) {
-            $filters_html .= '<div class="form-check">';
-            $filters_html .= '<input class="form-check-input filter-checkbox" type="checkbox" name="filter_' . esc_attr( $taxonomy ) . '[]" value="' . esc_attr( $term->slug ) . '" id="filter_' . esc_attr( $taxonomy . '_' . $term->term_id ) . '">';
-            $filters_html .= '<label class="form-check-label" for="filter_' . esc_attr( $taxonomy . '_' . $term->term_id ) . '">';
-            $filters_html .= esc_html( $term->name );
-            $filters_html .= '</label>';
-            $filters_html .= '</div>';
+            $input_id = 'filter_' . esc_attr( $taxonomy . '_' . $term->term_id );
+            $output  .= '<div class="form-check">';
+            $output  .= '<input class="form-check-input filter-checkbox" type="checkbox"'
+                      . ' name="filter_' . esc_attr( $taxonomy ) . '[]"'
+                      . ' value="' . esc_attr( $term->slug ) . '"'
+                      . ' id="' . $input_id . '">';
+            $output  .= '<label class="form-check-label" for="' . $input_id . '">'
+                      . esc_html( $term->name ) . '</label>';
+            $output  .= '</div>';
         }
-        
-        $filters_html .= '</div></div>';
+
+        $output .= '</div></div>';
     }
-    
-    wp_send_json_success( array( 'html' => $filters_html ) );
+
+    // Кешируем на 12 часов, сбрасывается при сохранении товара
+    set_transient( $cache_key, $output, 12 * HOUR_IN_SECONDS );
+    return $output;
+}
+
+/**
+ * Сброс кеша фильтров при изменении товара
+ */
+add_action( 'save_post_product',       'mytheme_flush_filters_cache' );
+add_action( 'woocommerce_update_product', 'mytheme_flush_filters_cache' );
+function mytheme_flush_filters_cache() {
+    global $wpdb;
+    $wpdb->query(
+        "DELETE FROM {$wpdb->options}
+         WHERE option_name LIKE '_transient_mytheme_filters_v2_%'
+            OR option_name LIKE '_transient_timeout_mytheme_filters_v2_%'"
+    );
+}
+
+add_action( 'wp_ajax_load_product_filters',        'ajax_load_product_filters' );
+add_action( 'wp_ajax_nopriv_load_product_filters', 'ajax_load_product_filters' );
+
+function ajax_load_product_filters() {
+    $category_id = intval( $_GET['category_id'] ?? 0 );
+    $html        = mytheme_get_filters_for_category( $category_id );
+    wp_send_json_success( array( 'html' => $html ) );
 }
 
 

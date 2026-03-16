@@ -198,31 +198,6 @@ jQuery(document).ready(function ($) {
         location.reload();
     });
 
-    // Загружаем фильтры через AJAX
-    function loadFilters() {
-        const bodyClass = $('body').attr('class') || '';
-        const categoryMatch = bodyClass.match(/term-(\d+)/);
-        const categoryId = categoryMatch ? categoryMatch[1] : 0;
-
-        $.ajax({
-            url: wc_ajax_params.ajax_url,
-            type: 'GET',
-            data: {
-                action: 'load_product_filters',
-                category_id: categoryId
-            },
-            success: function (response) {
-                if (response.success && response.data.html) {
-                    $('#product-filters-form').html(response.data.html);
-                    $('#filters-skeleton').hide();
-                    $('#product-filters-form').show();
-
-                    initFiltersFromURL();
-                }
-            }
-        });
-    }
-
     function initFiltersFromURL() {
         const urlParams = new URLSearchParams(window.location.search);
         let hasFilters = false;
@@ -243,6 +218,6 @@ jQuery(document).ready(function ($) {
         }
     }
 
-    loadFilters();
+    initFiltersFromURL();
 
 });

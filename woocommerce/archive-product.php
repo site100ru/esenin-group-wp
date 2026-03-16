@@ -80,7 +80,7 @@ do_action('woocommerce_before_main_content');
         <div class="section-title-wrapper">
             <h2 class="section-title">
                 <?php
-                if ( is_product_category() ) {
+                if (is_product_category()) {
                     single_cat_title();
                 } else {
                     woocommerce_page_title();
@@ -91,60 +91,58 @@ do_action('woocommerce_before_main_content');
         </div>
 
         <?php
-        if ( is_product_category() ) {
+        if (is_product_category()) {
 
             $current_term    = get_queried_object();
             $tab_parent_id   = $current_term->term_id;
-
-        } elseif ( is_shop() ) {
+        } elseif (is_shop()) {
 
             $tab_parent_id = 0;
-
         } else {
             $tab_parent_id = null;
         }
 
-        if ( $tab_parent_id !== null ) :
-            $subcategories = get_terms( array(
+        if ($tab_parent_id !== null) :
+            $subcategories = get_terms(array(
                 'taxonomy'   => 'product_cat',
                 'parent'     => $tab_parent_id,
                 'hide_empty' => true,
-            ) );
+            ));
 
-            if ( ! empty( $subcategories ) && ! is_wp_error( $subcategories ) ) :
+            if (! empty($subcategories) && ! is_wp_error($subcategories)) :
         ?>
-        <div class="row">
-            <div class="col text-center mb-4 mb-lg-5">
-                <div class="nav-scroller mb-0">
-                    <ul class="nav d-flex m-auto align-items-center tablist" id="myTab" role="tablist">
-                        <?php 
-                        $sub_count = 0;
-                        foreach ( $subcategories as $subcategory ) : 
-                            if ( $sub_count > 0 ) :
-                        ?>
-                        <li class="nav-item">
-                            <span class="nav-link px-0">
-                                <img src="<?php echo get_template_directory_uri(); ?>/img/ico/point.svg" alt="Разделительная точка">
-                            </span>
-                        </li>
-                        <?php endif; ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="<?php echo get_term_link( $subcategory ); ?>">
-                                <?php echo esc_html( $subcategory->name ); ?>
-                            </a>
-                        </li>
-                        <?php 
-                            $sub_count++;
-                        endforeach; 
-                        ?>
-                    </ul>
+                <div class="row">
+                    <div class="col text-center mb-4 mb-lg-5">
+                        <div class="nav-scroller mb-0">
+                            <ul class="nav d-flex m-auto align-items-center tablist" id="myTab" role="tablist">
+                                <?php
+                                $sub_count = 0;
+                                foreach ($subcategories as $subcategory) :
+                                    if ($sub_count > 0) :
+                                ?>
+                                        <li class="nav-item">
+                                            <span class="nav-link px-0">
+                                                <img src="<?php echo get_template_directory_uri(); ?>/img/ico/point.svg" alt="Разделительная точка">
+                                            </span>
+                                        </li>
+                                    <?php endif; ?>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="<?php echo get_term_link($subcategory); ?>">
+                                            <?php echo esc_html($subcategory->name); ?>
+                                        </a>
+                                    </li>
+                                <?php
+                                    $sub_count++;
+                                endforeach;
+                                ?>
+                            </ul>
+                        </div>
+                        <div class="d-block d-md-none text-center mb-4">
+                            <img src="<?php echo get_template_directory_uri(); ?>/img/ico/section-menu-coursor.svg" alt="Разделительная точка">
+                        </div>
+                    </div>
                 </div>
-                <div class="d-block d-md-none text-center mb-4">
-                    <img src="<?php echo get_template_directory_uri(); ?>/img/ico/section-menu-coursor.svg" alt="Разделительная точка">
-                </div>
-            </div>
-        </div>
-        <?php 
+        <?php
             endif; // subcategories not empty
         endif;     // tab_parent_id !== null
         ?>
@@ -158,27 +156,14 @@ do_action('woocommerce_before_main_content');
                         <span>Фильтры</span>
                     </button>
                     <div class="filters-dropdown-content">
-                        <div id="filters-skeleton" class="filters-grid">
-                            <div class="filter-skeleton-group">
-                                <div class="skeleton skeleton-title"></div>
-                                <div class="skeleton skeleton-item"></div>
-                                <div class="skeleton skeleton-item"></div>
-                                <div class="skeleton skeleton-item"></div>
-                            </div>
-                            <div class="filter-skeleton-group">
-                                <div class="skeleton skeleton-title"></div>
-                                <div class="skeleton skeleton-item"></div>
-                                <div class="skeleton skeleton-item"></div>
-                                <div class="skeleton skeleton-item"></div>
-                            </div>
-                            <div class="filter-skeleton-group">
-                                <div class="skeleton skeleton-title"></div>
-                                <div class="skeleton skeleton-item"></div>
-                                <div class="skeleton skeleton-item"></div>
-                            </div>
-                        </div>
-                        <form id="product-filters-form" class="filters-grid" style="display:none;"></form>
-                        
+                        <?php
+                        $filters_cat_id = is_product_category() ? get_queried_object_id() : 0;
+                        $filters_html   = mytheme_get_filters_for_category($filters_cat_id);
+                        ?>
+                        <form id="product-filters-form" class="filters-grid">
+                            <?php echo $filters_html; ?>
+                        </form>
+
                         <!-- Кнопка Применить -->
                         <button class="btn btn-corporate-color-1 apply-filters-btn" type="button">Применить</button>
                     </div>
@@ -187,7 +172,7 @@ do_action('woocommerce_before_main_content');
                 <!-- Сортировка -->
                 <div class="sorting-dropdown">
                     <button class="sorting-button" type="button">
-                        <span>Сортировка: 
+                        <span>Сортировка:
                             <?php
                             $current_orderby = isset($_GET['orderby']) ? $_GET['orderby'] : 'menu_order';
                             $sort_labels = array(
@@ -223,23 +208,23 @@ do_action('woocommerce_before_main_content');
         <!-- Контейнер для товаров (будет обновляться через AJAX) -->
         <div id="products-container">
             <?php
-            if ( woocommerce_product_loop() ) {
+            if (woocommerce_product_loop()) {
 
                 woocommerce_product_loop_start();
 
-                if ( wc_get_loop_prop( 'total' ) ) {
-                    while ( have_posts() ) {
+                if (wc_get_loop_prop('total')) {
+                    while (have_posts()) {
                         the_post();
-                        do_action( 'woocommerce_shop_loop' );
-                        wc_get_template_part( 'content', 'product' );
+                        do_action('woocommerce_shop_loop');
+                        wc_get_template_part('content', 'product');
                     }
                 }
 
                 woocommerce_product_loop_end();
 
-                do_action( 'woocommerce_after_shop_loop' );
+                do_action('woocommerce_after_shop_loop');
             } else {
-                do_action( 'woocommerce_no_products_found' );
+                do_action('woocommerce_no_products_found');
             }
             ?>
         </div>
@@ -263,30 +248,30 @@ do_action('woocommerce_before_main_content');
 $cat_description = '';
 $cat_title       = '';
 
-if ( is_product_category() ) {
+if (is_product_category()) {
     $current_term    = get_queried_object();
-    $cat_description = gl_get_cat_description( $current_term->term_id );
+    $cat_description = gl_get_cat_description($current_term->term_id);
     $cat_title       = $current_term->name;
-} elseif ( is_shop() ) {
-    $shop_page       = get_post( wc_get_page_id( 'shop' ) );
-    $cat_description = $shop_page ? apply_filters( 'the_content', $shop_page->post_content ) : '';
-    $cat_title       = get_the_title( wc_get_page_id( 'shop' ) );
+} elseif (is_shop()) {
+    $shop_page       = get_post(wc_get_page_id('shop'));
+    $cat_description = $shop_page ? apply_filters('the_content', $shop_page->post_content) : '';
+    $cat_title       = get_the_title(wc_get_page_id('shop'));
 }
 
-if ( $cat_description ) : ?>
-<section class="section bg-light">
-    <div class="container">
-        <div class="section-title-wrapper">
-            <h2 class="section-title"><?php echo esc_html( $cat_title ); ?></h2>
-            <div class="title-underline"></div>
-        </div>
-        <div class="row">
-            <div class="col">
-                <?php echo wp_kses_post( $cat_description ); ?>
+if ($cat_description) : ?>
+    <section class="section bg-light">
+        <div class="container">
+            <div class="section-title-wrapper">
+                <h2 class="section-title"><?php echo esc_html($cat_title); ?></h2>
+                <div class="title-underline"></div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <?php echo wp_kses_post($cat_description); ?>
+                </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 <?php endif; ?>
 <!-- ========== ТЕКСТОВЫЙ БЛОК  ========== -->
 
