@@ -1440,41 +1440,54 @@ function mytheme_get_filters_for_category( int $category_id ): string {
 
     global $wpdb;
 
-    // Все ID категорий (текущая + дочерние)
     $cat_ids   = get_term_children( $category_id, 'product_cat' );
     $cat_ids[] = $category_id;
     $cat_ids   = array_map( 'intval', array_filter( $cat_ids ) );
     $cat_in    = implode( ',', $cat_ids );
 
-    // Все таксономии атрибутов
+    // Один запрос — все атрибуты и термины сразу
+    $rows = $wpdb->get_results(
+        "SELECT t.term_id, t.name, t.slug, tt.taxonomy
+         FROM {$wpdb->terms} t
+         INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = t.term_id
+         WHERE tt.taxonomy LIKE 'pa_%'
+           AND tt.count > 0
+           AND EXISTS (
+               SELECT 1
+               FROM {$wpdb->term_relationships} tr1
+               INNER JOIN {$wpdb->term_relationships} tr2 ON tr2.object_id = tr1.object_id
+               INNER JOIN {$wpdb->term_taxonomy} tt2 ON tt2.term_taxonomy_id = tr2.term_taxonomy_id
+               WHERE tr1.term_taxonomy_id = tt.term_taxonomy_id
+                 AND tt2.taxonomy = 'product_cat'
+                 AND tt2.term_id IN ($cat_in)
+           )
+         ORDER BY tt.taxonomy, t.name"
+    );
+
+    if ( empty( $rows ) ) {
+        set_transient( $cache_key, '', 12 * HOUR_IN_SECONDS );
+        return '';
+    }
+
+    // Группируем термины по таксономии
+    $grouped = [];
+    foreach ( $rows as $row ) {
+        $grouped[ $row->taxonomy ][] = $row;
+    }
+
+    // Получаем метки атрибутов одним вызовом
     $attribute_taxonomies = wc_get_attribute_taxonomies();
-    if ( empty( $attribute_taxonomies ) ) return '';
+    $labels = [];
+    foreach ( $attribute_taxonomies as $attr ) {
+        $tax = wc_attribute_taxonomy_name( $attr->attribute_name );
+        $labels[ $tax ] = $attr->attribute_label;
+    }
 
     $output = '';
-
-    foreach ( $attribute_taxonomies as $attribute ) {
-        $taxonomy = wc_attribute_taxonomy_name( $attribute->attribute_name );
-
-        // Прямой SQL: термины атрибута, которые реально есть у товаров категории
-        // Один JOIN вместо загрузки тысяч post_id в PHP
-        $terms = $wpdb->get_results( $wpdb->prepare(
-            "SELECT DISTINCT t.term_id, t.name, t.slug
-             FROM {$wpdb->terms} t
-             INNER JOIN {$wpdb->term_taxonomy} tt  ON tt.term_id       = t.term_id
-             INNER JOIN {$wpdb->term_relationships} tr1 ON tr1.term_taxonomy_id = tt.term_taxonomy_id
-             INNER JOIN {$wpdb->term_relationships} tr2 ON tr2.object_id        = tr1.object_id
-             INNER JOIN {$wpdb->term_taxonomy} tt2 ON tt2.term_taxonomy_id  = tr2.term_taxonomy_id
-                                                   AND tt2.taxonomy         = 'product_cat'
-                                                   AND tt2.term_id          IN ($cat_in)
-             WHERE tt.taxonomy = %s
-             ORDER BY t.name",
-            $taxonomy
-        ) );
-
-        if ( empty( $terms ) ) continue;
-
+    foreach ( $grouped as $taxonomy => $terms ) {
+        $label   = $labels[ $taxonomy ] ?? $taxonomy;
         $output .= '<div class="filter-group">';
-        $output .= '<h6 class="filter-title">' . esc_html( $attribute->attribute_label ) . '</h6>';
+        $output .= '<h6 class="filter-title">' . esc_html( $label ) . '</h6>';
         $output .= '<div class="filter-options">';
 
         foreach ( $terms as $term ) {
@@ -1492,7 +1505,6 @@ function mytheme_get_filters_for_category( int $category_id ): string {
         $output .= '</div></div>';
     }
 
-    // Кешируем на 12 часов, сбрасывается при сохранении товара
     set_transient( $cache_key, $output, 12 * HOUR_IN_SECONDS );
     return $output;
 }
