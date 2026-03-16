@@ -265,7 +265,7 @@ $cat_title       = '';
 
 if ( is_product_category() ) {
     $current_term    = get_queried_object();
-    $cat_description = term_description( $current_term->term_id, 'product_cat' );
+    $cat_description = gl_get_cat_description( $current_term->term_id );
     $cat_title       = $current_term->name;
 } elseif ( is_shop() ) {
     $shop_page       = get_post( wc_get_page_id( 'shop' ) );

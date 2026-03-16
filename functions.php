@@ -1491,3 +1491,117 @@ function ajax_load_product_filters() {
     
     wp_send_json_success( array( 'html' => $filters_html ) );
 }
+
+
+// ===========================================================
+// КАСТОМНОЕ ОПИСАНИЕ КАТЕГОРИИ ТОВАРОВ (с TinyMCE)
+// ===========================================================
+
+add_action('product_cat_edit_form_fields',  'gl_render_cat_rich_description_edit');
+add_action('product_cat_add_form_fields',   'gl_render_cat_rich_description_add');
+add_action('edited_product_cat',            'gl_save_cat_rich_description');
+add_action('created_product_cat',           'gl_save_cat_rich_description');
+
+function gl_render_cat_rich_description_edit($term) {
+    $value = get_term_meta($term->term_id, '_gl_cat_rich_description', true);
+    ?>
+    <tr class="form-field">
+        <th scope="row">
+            <label for="gl_cat_rich_description">Расширенное описание</label>
+        </th>
+        <td>
+            <?php
+            wp_editor($value, 'gl_cat_rich_description', array(
+                'textarea_name' => 'gl_cat_rich_description',
+                'textarea_rows' => 15,
+                'media_buttons' => true,
+                'teeny'         => false,
+                'tinymce'       => true,
+                'quicktags'     => true,
+            ));
+            ?>
+            <p class="description">
+                Поддерживает HTML, изображения, ссылки и форматирование.
+                Используйте это поле вместо стандартного описания категории.
+            </p>
+        </td>
+    </tr>
+    <?php
+}
+
+function gl_render_cat_rich_description_add() {
+    ?>
+    <div class="form-field">
+        <label for="gl_cat_rich_description">Расширенное описание</label>
+        <?php
+        wp_editor('', 'gl_cat_rich_description', array(
+            'textarea_name' => 'gl_cat_rich_description',
+            'textarea_rows' => 15,
+            'media_buttons' => true,
+            'teeny'         => false,
+            'tinymce'       => true,
+            'quicktags'     => true,
+        ));
+        ?>
+        <p class="description">
+            Поддерживает HTML, изображения, ссылки и форматирование.
+        </p>
+    </div>
+    <?php
+}
+
+function gl_save_cat_rich_description($term_id) {
+    if (!isset($_POST['gl_cat_rich_description'])) return;
+    if (!current_user_can('manage_product_terms')) return;
+
+    update_term_meta($term_id, '_gl_cat_rich_description', wp_kses_post($_POST['gl_cat_rich_description']));
+}
+
+// ===========================================================
+// ВЫВОД ОПИСАНИЯ КАТЕГОРИИ С ПОДЪЁМОМ ПО ДЕРЕВУ
+// ===========================================================
+
+function gl_get_cat_description($term_id = null) {
+    if (!$term_id) {
+        $term_id = get_queried_object_id();
+    }
+
+    $depth    = 0;
+    $max_depth = 10; // защита от бесконечного цикла
+
+    while ($term_id && $depth < $max_depth) {
+        // Сначала смотрим кастомное мета-поле
+        $desc = get_term_meta($term_id, '_gl_cat_rich_description', true);
+
+        // Если пусто — смотрим стандартное поле
+        if (empty($desc)) {
+            $term = get_term($term_id, 'product_cat');
+            if (!is_wp_error($term) && !empty($term->description)) {
+                $desc = $term->description;
+            }
+        }
+
+        // Нашли описание — возвращаем
+        if (!empty($desc)) {
+            return $desc;
+        }
+
+        // Не нашли — идём к родителю
+        $term = get_term($term_id, 'product_cat');
+        if (is_wp_error($term) || empty($term->parent)) {
+            break;
+        }
+
+        $term_id = $term->parent;
+        $depth++;
+    }
+
+    return '';
+}
+
+function gl_the_cat_description($term_id = null) {
+    $desc = gl_get_cat_description($term_id);
+    if (!empty($desc)) {
+        echo '<div class="gl-category-description">' . wp_kses_post($desc) . '</div>';
+    }
+}
