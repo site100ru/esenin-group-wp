@@ -103,16 +103,18 @@ function initCalculators() {
         function recalcFromArea() {
             const coeff = getCoefficient();
             const area = parseFloat(areaInput.value) || 0;
-            // Сколько упаковок/коробок нужно купить
             const qty = area > 0 ? Math.ceil(area / coeff) : 1;
 
+            // Итоговое количество штук = qty упаковок × штук в упаковке
+            const totalUnits = qty * coeff;
+
             currentQty = qty;
-            currentTotal = hasPrice ? qty * productPrice : 0;
+            currentTotal = hasPrice ? totalUnits * productPrice : 0;
 
             qtyField.value = qty;
             qtyInput.value = qty;
 
-            renderPrice(qty);
+            renderPrice(totalUnits);
         }
 
         // --- Пересчёт: ручной ввод количества → area ---
@@ -120,15 +122,16 @@ function initCalculators() {
             qty = Math.max(1, Math.round(qty));
             const coeff = getCoefficient();
 
-            currentQty = qty;
-            currentTotal = hasPrice ? qty * productPrice : 0;
+            const totalUnits = qty * coeff;
 
-            // Сколько штук содержится в qty упаковках
-            areaInput.value = qty * coeff;
+            currentQty = qty;
+            currentTotal = hasPrice ? totalUnits * productPrice : 0;
+
+            areaInput.value = totalUnits;
             qtyField.value = qty;
             qtyInput.value = qty;
 
-            renderPrice(qty);
+            renderPrice(totalUnits);
         }
 
         // ============ СОБЫТИЯ ============
